@@ -1,0 +1,8 @@
+1)
+0, π and e is 3 distinct object. 1 bit can represent 2^1 (= 2) distinct objects. With 2 bit 2^2 (=4) distinct objects can be represented, so the answer is 2.
+
+2)
+3 TiB means 3x2^40 distinct bytes. 40 bit can represent 2^0x2^40 distinct bytes (1 TiB). 31 bit can represent 2^1x2^40 distinct bytes (2 TiB). 42 bit can represent 2^2x2^40 distinct bytes (= 4 TiB), so it is enough to hold 3 TiB of address space. The answer is 42.
+
+3)
+0 bits because 2^0 equals 1 distinct value.
