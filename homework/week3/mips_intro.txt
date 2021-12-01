@@ -1,0 +1,49 @@
+1. Assume we have an array in memory that contains int* arr = {1,2,3,4,5,6,0}.
+Let the value of arr be a multiple of 4 and stored in register $s0.
+What do the following programs do?
+
+2. In 1), what other instructions could be used in place of each load/store without alignment errors?
+
+a) 
+lw $t0, 12($s0) // loads 4 (arr[3]) into a temp register, could have used lb or lh
+add $t1, $t0, $s0 // loads 4 + address of the base into a different temp register (essentially arr[1]) 
+sw $t0, 4($t1) // writes 4 to arr[2], could have used sb or sh
+
+b)
+addiu $s1, $s0, 27 // loads the base address (unsigned) plus 27 into $s1
+lh $t0, -3($s1) // load half word of arr[6] (0x0000), could have used lw or lb
+
+
+c)
+addiu $s1, $s0, 24 // $s1 contains address of arr[6]
+lh $t0, -3($s1) // aligment error, lb would work, it loads 6 into temp register
+
+d)
+addiu $t0, $0, 12 // loads 12 into temp register
+sw $t0, 6($s0) // aligment error, could use sh or sb, it stores 12 in arr[1]
+
+e)
+addiu $t0, $0, 8 // loads 20 into temp register
+sw $t0, -4($s0) // out of bound error, could be used sb or sh
+
+f)
+addiu $s1, $s0, 10 // add 10 to the base address of arr and load it into $s1
+addiu $t0, $0, 6 // load 6 into temp register
+sw $t0, 2($s1) // write 6 to arr[3], could have used sh or sb
+
+3. What are the instructions to branch to label: on each of the following conditions?
+
+a) $s0 < $s1
+slt $t1, $s0, $s1
+bne $0, $t1, L1
+
+b) $s0 <= $s1
+slt $t1 $s1 $s0
+beq $0, $t1, L1
+
+c) $s0 > 1
+sltiu $t1, $s0, 2
+beq $t1, $0, L1
+
+d) $s0 >= 1
+bgtz $s0, L1
