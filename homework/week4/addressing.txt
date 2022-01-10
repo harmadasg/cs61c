@@ -1,0 +1,23 @@
+1. You need to jump to an instruction that 2^28 + 4 bytes higher than the current PC. How do you do it? Assume
+you know the exact destination address at compile time. (Hint: you need multiple instructions)
+
+The jump instruction can only reach addresses that share the same upper 4 bits as the PC. A jump 2^28+4 bytes away
+would require changing the fourth highest bit, so a jump instruction is not sufficient. We must manually load our 32 bit
+address into a register and use jr.
+
+	lui $at {upper 16 bits of Foo}
+	ori $at $at {lower 16 bits of Foo}
+	jr $at
+	
+###############################################################################################################################
+
+2. You now need to branch to an instruction 2^17 + 4 bytes higher than the current PC, when $t0 equals 0. Assume
+that we’re not jumping to a new 2^28 byte block. Write MIPS to do this.
+
+The total range of a branch instruction is -2^17 + 4 → 2^17 bytes (a 16 bit signed integer that counts by words, with the
+PC+4 rule). Thus, we cannot use a branch instruction to reach our goal, but by the problem’s assumption, we can use a
+jump. Assuming we’re jumping to label Foo:
+
+	beq $t0 $0 DoJump
+	[…]
+	DoJump: j Foo 

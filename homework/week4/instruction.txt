@@ -1,0 +1,11 @@
+1. Given the following MIPS code (and instruction addresses), fill in the blank fields for the following instructions
+(you’ll need your green sheet!)
+
+0x002cff00:	loop:	addu $t0, $t0, $t0		| 0 | 8 | 8 | 8 | 0 | 0x21 | 
+0x002cff04:			jal foo					| 3 | 0xc0001 |
+0x002cff08:			bne $t0, $zero, loop	| 5 | 8 | 0 | -3 = 0xfffd |
+...
+0x00300004:	foo:	jr $ra					$ra=0x002cff08
+
+2. What instruction is 0x00008A03?
+0x00008A03 -> 000000 00000 00000 10001 01000 000011 -> sra $s1, $0, 8
