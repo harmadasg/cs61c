@@ -137,6 +137,74 @@ void simple_log_test(void)
     free_commit_list(&commit_list);
 }
 
+// test beargit checkout return values
+void simple_checkout_test(void)
+{
+    int retval;
+    int not_new_branch = 0;
+    int is_new_branch = 1;
+
+    retval = beargit_init();
+    CU_ASSERT(0==retval);
+    retval = beargit_checkout("6666666666cccccccccccccccccccccccccccccc", not_new_branch);
+    CU_ASSERT(1==retval);
+    retval = beargit_checkout("master", is_new_branch);
+    CU_ASSERT(1==retval);
+    retval = beargit_checkout("feature", not_new_branch);
+    CU_ASSERT(1==retval);
+    retval = beargit_checkout("feature", is_new_branch);
+    CU_ASSERT(0==retval);
+
+    const int LINE_SIZE = 512;
+    char line[LINE_SIZE];
+
+    FILE* fstderr = fopen("TEST_STDERR", "r");
+    CU_ASSERT_PTR_NOT_NULL(fstderr);
+    CU_ASSERT_PTR_NOT_NULL(fgets(line, LINE_SIZE, fstderr));
+    CU_ASSERT(!strcmp(line,"ERROR: Commit 6666666666cccccccccccccccccccccccccccccc does not exist\n"));
+    CU_ASSERT_PTR_NOT_NULL(fgets(line, LINE_SIZE, fstderr));
+    CU_ASSERT(!strcmp(line,"ERROR: A branch named master already exists\n"));
+    CU_ASSERT_PTR_NOT_NULL(fgets(line, LINE_SIZE, fstderr));
+    CU_ASSERT(!strcmp(line,"ERROR: No branch feature exists\n"));
+
+    CU_ASSERT_PTR_NULL(fgets(line, LINE_SIZE, fstderr));
+
+    CU_ASSERT(feof(fstderr));
+    fclose(fstderr);
+}
+
+// test beargit branches
+void simple_branch_test(void)
+{
+    const int LINE_SIZE = 512;
+    char line[LINE_SIZE];
+
+    int retval;
+    retval = beargit_init();
+    CU_ASSERT(0==retval);
+    retval = beargit_branch();
+    CU_ASSERT(0==retval);
+    FILE* fstdout = fopen("TEST_STDOUT", "r");
+    CU_ASSERT_PTR_NOT_NULL(fstdout);
+    CU_ASSERT_PTR_NOT_NULL(fgets(line, LINE_SIZE, fstdout));
+    CU_ASSERT(!strcmp(line,"* master\n"));
+    CU_ASSERT_PTR_NULL(fgets(line, LINE_SIZE, fstdout));
+    CU_ASSERT(feof(fstdout));
+    fclose(fstdout);
+    
+    FILE* branches = fopen(".beargit/.branches", "r");
+    retval = beargit_checkout("feature", 1);
+    CU_ASSERT(0==retval);
+    CU_ASSERT_PTR_NOT_NULL(branches);
+    CU_ASSERT_PTR_NOT_NULL(fgets(line, LINE_SIZE, branches));
+    CU_ASSERT(!strcmp(line,"master\n"));
+    CU_ASSERT_PTR_NOT_NULL(fgets(line, LINE_SIZE, branches));
+    CU_ASSERT(!strcmp(line,"feature\n"));
+    CU_ASSERT_PTR_NULL(fgets(line, LINE_SIZE, branches));
+    CU_ASSERT(feof(branches));
+    fclose(branches);
+}
+
 /* The main() function for setting up and running the tests.
  * Returns a CUE_SUCCESS on successful running, another
  * CUnit error code on failure.
@@ -145,6 +213,8 @@ int cunittester()
 {
    CU_pSuite pSuite = NULL;
    CU_pSuite pSuite2 = NULL;
+   CU_pSuite pSuite3 = NULL;
+   CU_pSuite pSuite4 = NULL;
 
    /* initialize the CUnit test registry */
    if (CUE_SUCCESS != CU_initialize_registry())
@@ -172,6 +242,32 @@ int cunittester()
 
    /* Add tests to the Suite #2 */
    if (NULL == CU_add_test(pSuite2, "Log output test", simple_log_test))
+   {
+      CU_cleanup_registry();
+      return CU_get_error();
+   }
+
+   pSuite3 = CU_add_suite("Suite_3", init_suite, clean_suite);
+   if (NULL == pSuite3) {
+      CU_cleanup_registry();
+      return CU_get_error();
+   }
+
+   /* Add tests to the Suite #3 */
+   if (NULL == CU_add_test(pSuite3, "Simple checkout test", simple_checkout_test))
+   {
+      CU_cleanup_registry();
+      return CU_get_error();
+   }
+
+   pSuite4 = CU_add_suite("Suite_4", init_suite, clean_suite);
+   if (NULL == pSuite4) {
+      CU_cleanup_registry();
+      return CU_get_error();
+   }
+
+   /* Add tests to the Suite #4 */
+   if (NULL == CU_add_test(pSuite4, "Simple branch test", simple_branch_test))
    {
       CU_cleanup_registry();
       return CU_get_error();

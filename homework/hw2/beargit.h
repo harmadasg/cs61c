@@ -21,3 +21,4 @@ void next_commit_id(char* commit_id);
 
 #define BRANCHNAME_SIZE 128
 #define COMMIT_ID_BRANCH_BYTES 10
+#define COMMIT_ID_NON_BRANCH_BYTES 30
