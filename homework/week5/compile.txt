@@ -1,0 +1,26 @@
+1. What is the Stored Program concept and what does it enable us to do?
+	instructions are stored in memory along with the data they are operating on.
+
+2. How many passes through the code does the Assembler have to make? Why?
+	2 passes because branch intructions can refer to labels that are forward in the program
+	first pass to go through and remember the labels
+	second pass to use label positions to generate code
+
+3. What are the different parts of the object files output by the Assembler?
+	object file header
+	text segment
+	data segment
+	relocation information
+	symbol table
+	debugging information
+
+4. Which step in CALL resolves relative addressing? Absolute addressing?
+	relative addressing - assembler
+	absolute addressing - linker
+
+5. What step in CALL may make use of the $at register?
+	assembler
+
+6. What does RISC stand for? How is this related to pseudoinstructions?
+	reduced instruction set computing
+	basically the goal is to make an uniform instructions format and reduce the number of instructions

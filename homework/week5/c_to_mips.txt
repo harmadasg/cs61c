@@ -1,0 +1,40 @@
+1. Assuming $a0 and $a1 hold integer pointers, swap the values they point to via the stack and return control
+
+	void swap(int *a, int *b) {
+		int tmp = *a;
+		*a = *b;
+		*b = tmp;
+	}
+
+
+	addiu $sp, $sp, -4
+	lw $t0, 0($a0)
+	sw $t0, 0($sp)
+	lw $t0, 0($a1)
+	sw $t0, 0($a0)
+	lw $t0, 0($sp)
+	sw $t0, 0($a1)
+	addiu $sp, $sp, 4
+	jr $ra
+
+2. Translate the following algorithm that finds the sum of the numbers from 0 to N to MIPS assembly. Assume
+$s0 holds N, $s1 holds sum, and that N is greater than or equal to 0.
+
+	int sum = 0;
+	if (N==0) return 0;
+	while (N != 0) {
+		sum += N;
+		N--;
+	}
+	return sum;
+
+	Start:	add $s1 $0 $0
+	Loop:	beq $s0, $0, Ret
+			add $s1, $s1, $s0
+			addiu $s0, $s0, -1
+			j Loop
+	Ret:	addiu $v0, $s1, 0
+			jr $ra
+
+3. What must be done to make the adding algorithm from the previous part into a callable MIPS function?
+	N should be in an argument register, allocate stack, push callee saved registers to stack, restore them at the end and deallocate stack

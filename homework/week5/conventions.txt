@@ -1,0 +1,51 @@
+1. How should $sp be used? When do we add or subtract from $sp?
+	$sp is the stack pointer, a special purpose register. It always points to the last used space in the stack.
+	$sp is decremented when calling a function and need to save some register values and restore it when the function returns.
+
+2. Which registers need to be saved or restored before using jr to return from a function?
+	callee saved registers
+
+3. Which registers need to be saved before using jal?
+	caller saved registers
+
+4. How do we pass arguments into functions?
+	use the registers $a0-$a3 by convention
+
+5. What do we do if there are more than four arguments to a function?
+	push the additional registers to the stack
+
+6. How are values returned by functions?
+	use the registers $v0-$v1 by convention
+	
+When calling a function in MIPS, who needs to save the following registers to the stack? Answer “caller” for the
+procedure making a function call, “callee” for the function being called, or “N/A” for neither.
+
+	$0 - N/A
+	$v* - caller
+	$a* - caller
+	$t* - caller
+	$s* - callee
+	$sp - N/A
+	$ra - caller
+
+Now assume a function foo (which may be called from a main fucntion) calls another function bar, which is known to
+call some other functions. foo takes one argument and will modify and use $t0 and $s0. bar takes two arguments,
+returns an integer, and uses $t0-$t2 and $s0-$s1. In the boxes below, draw a possible ordering of the stack just
+before bar calls a function. The top left box is the address of $sp when foo is first called, and the stack goes
+downwards, continuing at each next column. Add ‘(f)’ if the register is stored by foo and ‘(b)’ if the register is
+stored by bar. The first one is written in for you.
+
+1 $ra (f)
+2 $a0 (f)
+3 $t0 (f)
+4 $s0 (f)
+5 $v0 (f)
+6 $ra (b)
+7 $a0 (b)
+8 $a1 (b)
+9 $s0 (b)
+10 $t0 (b)
+11 $t1 (b)
+12 $t2 (b)
+13 $v0 (b)
+14 $s1 (b)
