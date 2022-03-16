@@ -31,7 +31,7 @@ int write_mem(uint8_t opcode, FILE* output, char** args, size_t num_args);
 int write_branch(uint8_t opcode, FILE* output, char** args, size_t num_args, 
     uint32_t addr, SymbolTable* symtbl);
 
-int write_jump(uint8_t opcode, FILE* output, char** args, size_t num_args, 
-    uint32_t addr, SymbolTable* reltbl);
+int write_jump(uint8_t opcode, FILE* output, char** args,size_t num_args,
+    uint32_t addr, SymbolTable* symtbl, SymbolTable* reltbl);
 
 #endif
