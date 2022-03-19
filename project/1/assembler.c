@@ -11,7 +11,7 @@
 const int MAX_ARGS = 3;
 const int BUF_SIZE = 1024;
 const char* IGNORE_CHARS = " \f\n\r\t\v,()";
-const char* DELIMITERS = " \n";
+const char* DELIMITERS = ", \n\t";
 
 /*******************************
  * Helper Functions
@@ -135,7 +135,7 @@ int pass_one(FILE* input, FILE* output, SymbolTable* symtbl) {
             continue;
         }
 
-        char* name = buf;
+        char* name = token;
         int label_status = add_if_label(line, token, addr, symtbl);
         if (label_status == -1) errors++;
         if (label_status)
@@ -189,7 +189,10 @@ int pass_two(FILE *input, FILE* output, SymbolTable* symtbl, SymbolTable* reltbl
     // Next, use strtok() to scan for next character. If there's nothing,
     // go to the next line.
         char* name = strtok(buf, DELIMITERS);
-        if (!name) continue;
+        if (!name) {
+            line++;
+            continue;
+        }
     // Parse for instruction arguments. You should use strtok() to tokenize
     // the rest of the line. Extra arguments should be filtered out in pass_one(),
     // so you don't need to worry about that here.

@@ -13,8 +13,8 @@ const int SHAMT_SHIFT_AMOUNT = 6;
 const int OP_CODE_SHIFT_AMOUNT = 26;
 const int MIN_16_BIT_INT = -32768;
 const int MAX_16_BIT_INT = 65535;
-const int MIN_32_BIT_INT = -2147483648;
-const int MAX_32_BIT_INT = 4294967295;
+const long MIN_32_BIT_INT = -2147483648;
+const long MAX_32_BIT_INT = 4294967295;
 
 /* Writes instructions during the assembler's first pass to OUTPUT. The case
    for general instructions has already been completed, but you need to write
@@ -61,15 +61,15 @@ unsigned write_pass_one(FILE* output, const char* name, char** args, int num_arg
             fprintf(output, "%s %s %s %s\n", "addiu", args[0], "$0", args[1]);
             return 1;
         }
-        fprintf(output, "%s, %s %ld\n", "lui", "$at", num & 0xFFFF0000);
-        fprintf(output, "%s, %s %s, %ld\n", "ori", args[0], "$at", num & 0xFFFF);
+        fprintf(output, "%s %s %ld\n", "lui", "$at", num >> 16 & 0xFFFF);
+        fprintf(output, "%s %s %s %ld\n", "ori", args[0], "$at", num & 0xFFFF);
         return 2;
 
     } else if (strcmp(name, "blt") == 0) {
         if (num_args != 3) return 0;
 
-        fprintf(output, "%s, %s %s %s\n", "slt", "$at", args[0], args[1]);
-        fprintf(output, "%s, %s %s %s\n", "bne", "$at", "$0", args[2]);
+        fprintf(output, "%s %s %s %s\n", "slt", "$at", args[0], args[1]);
+        fprintf(output, "%s %s %s %s\n", "bne", "$at", "$0", args[2]);
         return 2;
 
     } else {
@@ -140,7 +140,7 @@ int write_rtype(uint8_t funct, FILE* output, char** args, size_t num_args) {
     if (rd == -1 || rs == -1 || rt == -1)
         return -1;
 
-    uint32_t instruction = (rs << RS_SHIFT_AMOUNT) + (rt << RT_SHIFT_AMOUNT) + (rd << RD_SHIFT_AMOUNT) + funct;
+    uint32_t instruction = (rs << RS_SHIFT_AMOUNT) | (rt << RT_SHIFT_AMOUNT) | (rd << RD_SHIFT_AMOUNT) | funct;
     write_inst_hex(output, instruction);
     return 0;
 }
@@ -165,7 +165,7 @@ int write_shift(uint8_t funct, FILE* output, char** args, size_t num_args) {
     if (rd == -1 || rt == -1 || err == -1)
         return -1;
 
-    uint32_t instruction =  (rt << RT_SHIFT_AMOUNT) + (rd << RD_SHIFT_AMOUNT) + (shamt << SHAMT_SHIFT_AMOUNT) + funct;
+    uint32_t instruction =  (rt << RT_SHIFT_AMOUNT) | (rd << RD_SHIFT_AMOUNT) | (shamt << SHAMT_SHIFT_AMOUNT) | funct;
     write_inst_hex(output, instruction);
     return 0;
 }
@@ -179,7 +179,7 @@ int write_jr(uint8_t funct, FILE* output, char** args, size_t num_args) {
     if (rs == -1)
         return -1;
 
-    uint32_t instruction = (rs << RS_SHIFT_AMOUNT) + funct;
+    uint32_t instruction = (rs << RS_SHIFT_AMOUNT) | funct;
     write_inst_hex(output, instruction);
     return 0;
 }
@@ -196,7 +196,7 @@ int write_itype(uint8_t opcode, FILE* output, char** args, size_t num_args) {
     if (rt == -1 || rs == -1 || err == -1)
         return -1;
 
-    uint32_t instruction = (opcode << OP_CODE_SHIFT_AMOUNT) + (rt << RT_SHIFT_AMOUNT) + (rs << RS_SHIFT_AMOUNT) + imm;
+    uint32_t instruction = (opcode << OP_CODE_SHIFT_AMOUNT) + (rs << RS_SHIFT_AMOUNT) + (rt << RT_SHIFT_AMOUNT) + imm;
     write_inst_hex(output, instruction);
     return 0;
 }
@@ -215,7 +215,7 @@ int write_lui(uint8_t opcode, FILE* output, char** args, size_t num_args) {
 
     long int imm;
     int rt = translate_reg(args[0]);
-    int err = translate_num(&imm, args[2], -32768, 65535);
+    int err = translate_num(&imm, args[1], -32768, 65535);
 
     if (rt == -1 || err == -1)
         return -1;
@@ -243,8 +243,11 @@ int write_branch(uint8_t opcode, FILE* output, char** args, size_t num_args, uin
     long int lbl_addr = get_addr_for_symbol(symtbl, name);
     if (lbl_addr == -1)
         return -1;
+    int offset = (lbl_addr - addr) / 4;
+    if (offset > 0) offset++;
+    if (offset < 0) offset--;
 
-    uint32_t instruction =  (opcode << OP_CODE_SHIFT_AMOUNT) + (rt << RT_SHIFT_AMOUNT) + (rs << RS_SHIFT_AMOUNT) + lbl_addr;
+    uint32_t instruction =  (opcode << OP_CODE_SHIFT_AMOUNT) + (rs << RS_SHIFT_AMOUNT) + (rt << RT_SHIFT_AMOUNT) + offset;
     write_inst_hex(output, instruction);
     return 0;
 }
