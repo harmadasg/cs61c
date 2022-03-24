@@ -196,7 +196,7 @@ int write_itype(uint8_t opcode, FILE* output, char** args, size_t num_args) {
     if (rt == -1 || rs == -1 || err == -1)
         return -1;
 
-    uint32_t instruction = (opcode << OP_CODE_SHIFT_AMOUNT) + (rs << RS_SHIFT_AMOUNT) + (rt << RT_SHIFT_AMOUNT) + imm;
+    uint32_t instruction = (opcode << OP_CODE_SHIFT_AMOUNT) | (rs << RS_SHIFT_AMOUNT) | (rt << RT_SHIFT_AMOUNT) | (uint16_t)imm;
     write_inst_hex(output, instruction);
     return 0;
 }
@@ -220,13 +220,26 @@ int write_lui(uint8_t opcode, FILE* output, char** args, size_t num_args) {
     if (rt == -1 || err == -1)
         return -1;
 
-    uint32_t instruction =  (opcode << OP_CODE_SHIFT_AMOUNT) + (rt << RT_SHIFT_AMOUNT) + imm;
+    uint32_t instruction =  (opcode << OP_CODE_SHIFT_AMOUNT) | (rt << RT_SHIFT_AMOUNT) | (uint16_t)imm;
     write_inst_hex(output, instruction);
     return 0;
 }
 
 int write_mem(uint8_t opcode, FILE* output, char** args, size_t num_args) {
-    return write_itype(opcode, output, args, num_args);
+    if (!output || num_args != 3)
+        return -1;
+
+    long int imm;
+    int rt = translate_reg(args[0]);
+    int rs = translate_reg(args[2]);
+    int err = translate_num(&imm, args[1], MIN_16_BIT_INT, MAX_16_BIT_INT);
+
+    if (rt == -1 || rs == -1 || err == -1)
+        return -1;
+
+    uint32_t instruction = (opcode << OP_CODE_SHIFT_AMOUNT) | (rs << RS_SHIFT_AMOUNT) | (rt << RT_SHIFT_AMOUNT) | (uint16_t)imm;
+    write_inst_hex(output, instruction);
+    return 0;
 }
 
 int write_branch(uint8_t opcode, FILE* output, char** args, size_t num_args, uint32_t addr, SymbolTable* symtbl) {
@@ -243,11 +256,9 @@ int write_branch(uint8_t opcode, FILE* output, char** args, size_t num_args, uin
     long int lbl_addr = get_addr_for_symbol(symtbl, name);
     if (lbl_addr == -1)
         return -1;
-    int offset = (lbl_addr - addr) / 4;
-    if (offset > 0) offset++;
-    if (offset < 0) offset--;
+    int offset = -1 + (lbl_addr - addr) / 4;
 
-    uint32_t instruction =  (opcode << OP_CODE_SHIFT_AMOUNT) + (rs << RS_SHIFT_AMOUNT) + (rt << RT_SHIFT_AMOUNT) + offset;
+    uint32_t instruction =  (opcode << OP_CODE_SHIFT_AMOUNT) | (rs << RS_SHIFT_AMOUNT) | (rt << RT_SHIFT_AMOUNT) | (uint16_t)offset;
     write_inst_hex(output, instruction);
     return 0;
 }
@@ -262,7 +273,7 @@ int write_jump(uint8_t opcode, FILE* output, char** args, size_t num_args, uint3
     if (lbl_addr == -1)
         return -1;
 
-    uint32_t instruction =  (opcode << OP_CODE_SHIFT_AMOUNT) + lbl_addr;
+    uint32_t instruction =  (opcode << OP_CODE_SHIFT_AMOUNT) | lbl_addr;
     write_inst_hex(output, instruction);
     return 0;
 }

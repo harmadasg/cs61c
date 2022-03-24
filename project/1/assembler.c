@@ -11,7 +11,7 @@
 const int MAX_ARGS = 3;
 const int BUF_SIZE = 1024;
 const char* IGNORE_CHARS = " \f\n\r\t\v,()";
-const char* DELIMITERS = ", \n\t";
+const char* DELIMITERS = ", \n\t()";
 
 /*******************************
  * Helper Functions
@@ -158,12 +158,12 @@ int pass_one(FILE* input, FILE* output, SymbolTable* symtbl) {
             continue;
         }
 
-        int err = write_pass_one(output, name, args, num_args);
-        if (!err) {
+        int lines_written = write_pass_one(output, name, args, num_args);
+        if (!lines_written) {
             raise_inst_error(line, name, args, num_args);
             errors++;
         }
-        line++; addr+=4;
+        line++; addr += 4 * lines_written;
     }
     return errors == 0 ? 0 : -1;
 }
