@@ -48,9 +48,34 @@
 # Returns:  address of symbol if found or -1 if not found
 #------------------------------------------------------------------------------
 addr_for_symbol:
-	# YOUR CODE HERE
+	addiu $sp $sp, -12
+	sw $ra, 0($sp)
+	sw $s0, 4($sp)
+	sw $s1, 8($sp)
+
+	move $s0, $a0
+	move $s1, $a1
+	li $v0, -1
+	beq $s1, $0, addr_for_symbol_ret
+addr_for_symbol_loop:
+	beq $s0, $0, addr_for_symbol_ret
+
+	lw $a0, 4($s0)
+	move $a1, $s1
+	jal streq
+
+	beq $v0, $0, addr_for_symbol_found
+	lw $s0, 8($s0)
+	j addr_for_symbol_loop
+
+addr_for_symbol_found:
+	lw $v0, 0($s0)
+addr_for_symbol_ret:
+	lw $s1, 8($sp)
+	lw $s0, 4($sp)
+	lw $ra, 0($sp)
+	addiu $sp $sp, 12
 	jr $ra
-	
 #------------------------------------------------------------------------------
 # function add_to_list()
 #------------------------------------------------------------------------------
@@ -70,7 +95,30 @@ addr_for_symbol:
 # Returns: the new list
 #------------------------------------------------------------------------------
 add_to_list:	
-	# YOUR CODE HERE
+	addiu $sp $sp, -16
+	sw $ra, 0($sp)
+	sw $s0, 4($sp)
+	sw $s1, 8($sp)
+	sw $s2, 12($sp)
+
+	move $s0, $a0
+	move $s1, $a1
+	move $s2, $a2
+
+	move $a0, $s2
+	jal copy_of_str
+	move $s2, $v0
+
+	jal new_node
+	sw $s1, 0($v0)
+	sw $s2, 4($v0)
+	sw $s0, 8($v0)
+
+	lw $s2, 12($sp)
+	lw $s1, 8($sp)
+	lw $s0, 4($sp)
+	lw $ra, 0($sp)
+	addiu $sp $sp, 16
 	jr $ra
 
 ###############################################################################

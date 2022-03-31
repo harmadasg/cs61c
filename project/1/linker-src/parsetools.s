@@ -36,7 +36,30 @@
 # Returns: none
 #------------------------------------------------------------------------------
 hex_to_str:
-	# YOUR CODE HERE
+	li $t0, 0 # null terminator
+	sb $t0, 9($a1)
+	li $t0, 10 # newline character
+	sb $t0, 8($a1)
+
+	li $t2,  8 # index
+	li $t0, 0xF0000000 # mask for last 4 bits (because of little endian)
+hex_to_str_loop:
+	beq $t2, $0, hex_to_str_ret
+	and $t1, $a0, $t0 # apply mask
+	srl $t1, $t1, 28 # shift into position
+	bleu $t1, 9, hex_to_str_0_9
+hex_to_str_a_f:
+	addiu $t1, $t1, 87 # convert num -> ASCII
+	j hex_to_str_loop_end
+hex_to_str_0_9:
+	addiu $t1, $t1, 48 # convert num -> ASCII
+hex_to_str_loop_end:
+	sb $t1, 0($a1)
+	addiu $a1, $a1, 1
+	addiu $t2, $t2, -1 # update index
+	sll $a0, $a0, 4 # shift actual number too
+	j hex_to_str_loop
+hex_to_str_ret:
 	jr $ra
 
 ###############################################################################

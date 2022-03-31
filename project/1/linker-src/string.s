@@ -27,7 +27,15 @@ tab:	.asciiz "\t"
 # Returns: the length of the string
 #------------------------------------------------------------------------------
 strlen:
-	# YOUR CODE HERE
+	li $v0, 0
+	beq $a0, $0, strlen_ret
+strlen_loop:
+	lb $t0, 0($a0)
+	addiu $a0, $a0, 1
+	beq $t0, $0, strlen_ret
+	addiu $v0, $v0, 1
+	j strlen_loop
+strlen_ret:
 	jr $ra
 
 #------------------------------------------------------------------------------
@@ -41,7 +49,19 @@ strlen:
 # Returns: the destination array
 #------------------------------------------------------------------------------
 strncpy:
-	# YOUR CODE HERE
+	move $v0, $a0
+	beq $a0, $0, strncpy_ret
+	beq $a1, $0, strncpy_ret
+strncpy_loop:
+	beq $a2, $0, strncpy_ret
+	lb $t0, 0($a1)
+	sb $t0, 0($a0)
+	beq $t0, $0, strncpy_ret
+	addiu $a0, $a0, 1
+	addiu $a1, $a1, 1
+	addiu $a2, $a2, -1
+	j strncpy_loop
+strncpy_ret:
 	jr $ra
 
 #------------------------------------------------------------------------------
@@ -57,7 +77,28 @@ strncpy:
 # Returns: pointer to the copy of the string
 #------------------------------------------------------------------------------
 copy_of_str:
-	# YOUR CODE HERE
+	addiu $sp $sp, -12
+	sw $ra, 0($sp)
+	sw $s0, 4($sp)
+	sw $s1, 8($sp)
+
+	move $s0, $a0 # $s0 = string to copy
+	jal strlen
+	move $s1, $v0 # $s1 = length of string
+
+	move $a0, $s1
+	li $v0, 9 # allocate space on heap
+	syscall
+
+	move $a0, $v0
+	move $a1, $s0
+	move $a2, $s1
+	jal strncpy
+
+	lw $s1, 8($sp)
+	lw $s0, 4($sp)
+	lw $ra, 0($sp)
+	addiu $sp $sp, 12
 	jr $ra
 
 ###############################################################################

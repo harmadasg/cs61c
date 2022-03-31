@@ -45,7 +45,16 @@ relocLabel: .asciiz ".relocation"
 # Returns: 1 if the instruction needs relocation, 0 otherwise.
 #------------------------------------------------------------------------------
 inst_needs_relocation:
-	# YOUR CODE HERE
+	li $v0, 0
+	li $t0 0xFC000000 # opcode selector mask (first 6 bits)
+	and $t1, $t0, $a0
+	srl $t1, $t1, 26
+	beq $t1, 2, inst_needs_relocation_true # j
+	beq $t1, 3, inst_needs_relocation_true # jal
+	j inst_needs_relocation_ret
+inst_needs_relocation_true:
+	li $v0, 1
+inst_needs_relocation_ret:
 	jr $ra
 	
 #------------------------------------------------------------------------------
@@ -67,7 +76,40 @@ inst_needs_relocation:
 # Returns: the relocated instruction, or -1 if error
 #------------------------------------------------------------------------------
 relocate_inst:
-	# YOUR CODE HERE
+	addiu $sp $sp, -16
+	sw $ra, 0($sp)
+	sw $s0, 4($sp)
+	sw $s1, 8($sp)
+	sw $s2, 12($sp)
+
+	move $s0, $a0
+	move $s1, $a1
+	move $s2, $a2
+	move $s3, $a3
+
+	move $a0, $s3
+	move $a1, $s1
+	jal symbol_for_addr
+	beq $v0, $0, relocate_inst_not_found
+
+	move $a0, $s2
+	move $a1, $v0
+	jal addr_for_symbol
+	beq $v0, -1, relocate_inst_not_found
+
+	andi $v0, $v0, 0xFFFFFFF # select lower 28 bits
+	srl $v0, $v0, 2 # get absolute address
+	andi $s0, $s0, 0xFC000000 # delete old address
+	or $v0, $v0, $s0 # set new address
+	j relocate_inst_ret
+relocate_inst_not_found:
+	li $v0, -1
+relocate_inst_ret:
+	lw $s2, 12($sp)
+	lw $s1, 8($sp)
+	lw $s0, 4($sp)
+	lw $ra, 0($sp)
+	addiu $sp $sp, 16
 	jr $ra
 
 ###############################################################################
