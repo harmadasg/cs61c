@@ -54,7 +54,7 @@ int is_valid_label(const char* str) {
    function returns 0 if the conversion proceeded without errors, or -1 if an 
    error occurred.
  */
-int translate_num(long int* output, const char* str, long int lower_bound, 
+int translate_num(long int* output, const char* str, long int lower_bound,
     long int upper_bound) {
     if (!str || !output) {
         return -1;
@@ -64,8 +64,8 @@ int translate_num(long int* output, const char* str, long int lower_bound,
     char *endptr = NULL;
     long temp = strtol(str, &endptr, 0);
 
-    if (errno != 0 || str == endptr )
-        return -1; //stackoverflow.com/questions/26080829/detecting-strtol-failure
+    if (errno != 0 ||  *endptr)
+        return -1;
 
     if (temp < lower_bound || temp > upper_bound)
         return -1;

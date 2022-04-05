@@ -11,7 +11,6 @@
 const int MAX_ARGS = 3;
 const int BUF_SIZE = 1024;
 const char* IGNORE_CHARS = " \f\n\r\t\v,()";
-const char* DELIMITERS = ", \n\t()";
 
 /*******************************
  * Helper Functions
@@ -130,7 +129,7 @@ int pass_one(FILE* input, FILE* output, SymbolTable* symtbl) {
     while(fgets(buf, BUF_SIZE, input)) {
         skip_comment(buf);
         char* token;
-        if (NULL == (token = strtok(buf, DELIMITERS))) { // whole line is a comment
+        if (NULL == (token = strtok(buf, IGNORE_CHARS))) { // whole line is a comment
             line++;
             continue;
         }
@@ -139,7 +138,7 @@ int pass_one(FILE* input, FILE* output, SymbolTable* symtbl) {
         int label_status = add_if_label(line, token, addr, symtbl);
         if (label_status == -1) errors++;
         if (label_status)
-            name = strtok(NULL, DELIMITERS);
+            name = strtok(NULL, IGNORE_CHARS);
 
         if (!name) {    // whole line is only a label
             line++;
@@ -148,7 +147,7 @@ int pass_one(FILE* input, FILE* output, SymbolTable* symtbl) {
 
         char* args[MAX_ARGS];
         int num_args = 0;
-        for (int i = 0; (token = strtok(NULL, DELIMITERS)) && i < MAX_ARGS; i++) {
+        for (int i = 0; (token = strtok(NULL, IGNORE_CHARS)) && i < MAX_ARGS; i++) {
             args[i] = token;
             num_args++;
         }
@@ -188,7 +187,7 @@ int pass_two(FILE *input, FILE* output, SymbolTable* symtbl, SymbolTable* reltbl
     while(fgets(buf, BUF_SIZE, input)) {
     // Next, use strtok() to scan for next character. If there's nothing,
     // go to the next line.
-        char* name = strtok(buf, DELIMITERS);
+        char* name = strtok(buf, IGNORE_CHARS);
         if (!name) {
             line++;
             continue;
@@ -199,7 +198,7 @@ int pass_two(FILE *input, FILE* output, SymbolTable* symtbl, SymbolTable* reltbl
         char* args[MAX_ARGS];
         int num_args = 0;
         char* token;
-        for (int i = 0; (token = strtok(NULL, DELIMITERS)); i++) {
+        for (int i = 0; (token = strtok(NULL, IGNORE_CHARS)); i++) {
             args[i] = token;
             num_args++;
         }

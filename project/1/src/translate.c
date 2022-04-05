@@ -256,7 +256,7 @@ int write_branch(uint8_t opcode, FILE* output, char** args, size_t num_args, uin
     long int lbl_addr = get_addr_for_symbol(symtbl, name);
     if (lbl_addr == -1)
         return -1;
-    int offset = -1 + (lbl_addr - addr) / 4;
+    int offset = -(addr + 4 - lbl_addr) / 4;
 
     uint32_t instruction =  (opcode << OP_CODE_SHIFT_AMOUNT) | (rs << RS_SHIFT_AMOUNT) | (rt << RT_SHIFT_AMOUNT) | (uint16_t)offset;
     write_inst_hex(output, instruction);
@@ -269,11 +269,8 @@ int write_jump(uint8_t opcode, FILE* output, char** args, size_t num_args, uint3
 
     char* name = args[0];
     add_to_table(reltbl, name, addr);
-    long int lbl_addr = get_addr_for_symbol(symtbl, name);
-    if (lbl_addr == -1)
-        return -1;
 
-    uint32_t instruction =  (opcode << OP_CODE_SHIFT_AMOUNT) | lbl_addr;
+    uint32_t instruction =  opcode << OP_CODE_SHIFT_AMOUNT;
     write_inst_hex(output, instruction);
     return 0;
 }
