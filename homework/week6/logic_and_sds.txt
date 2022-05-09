@@ -1,0 +1,19 @@
+1.
+not, and, or, xor, nand, nor, xnor
+
+2.
+    a) !A!B + !AB + A!B
+    b) !AB + A!B
+    c) !A!B + AB
+
+3. use 2 NAND gates and split the wire after the first one
+
+4. A truth table with n inputs has 2^n rows. Each logic gate has a 0 or a 1 at each of these
+rows. Imagining a function as a 2^n-bit number, we count 2^2^n
+total functions, or 16 in the case of n = 2.
+
+5.
+
+    a) AC
+    b) A + !C
+    c) !A + B!C + !BC
