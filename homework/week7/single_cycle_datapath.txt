@@ -1,0 +1,23 @@
++---------+-------+---------+---------+--------+---------+---------+--------+-----------+-------+
+| Instrs  | Jump  | Branch  | RegDst  | ExtOp  | ALUSrc  | ALUCtr  | MemWr  | MemtoReg  | RegWr |
++---------+-------+---------+---------+--------+---------+---------+--------+-----------+-------+
+| add     |     0 | 0       | 1       | X      | 0       | 0010    |      0 | 0         |     1 |
+| ori     |     0 | 0       | 0       | 0      | 1       | 0001    |      0 | 0         |     1 |
+| lw      |     0 | 0       | 0       | 1      | 1       | 0010    |      0 | 1         |     1 |
+| sw      |     0 | 0       | X       | 1      | 1       | 0010    |      1 | X         |     0 |
+| beq     |     0 | 1       | X       | 1      | 0       | 0110    |      0 | X         |     0 |
+| j       |     1 | X       | X       | X      | X       | XXXX    |      0 | X         |     0 |
++---------+-------+---------+---------+--------+---------+---------+--------+-----------+-------+
+
+1. What instruction exercises the critical path?
+    Load Word (lw)
+2. What is the critical path in the single cycle CPU?
+    Red dashed line in the diagram
+3. What are the minimum clock cycle, tclk, and the maximum clock frequency, fclk?
+    tclk >= tPC, clk-to-q + tIMEMread + tRFread + tALU + tDMEMread + tmux + tRFsetup
+    = 30 + 250 + 150 + 200 + 250 + 25 + 20 = 925 ps
+    fclk = 1/tclk <= 1/ (925 ps) = 1.08 GHz
+4. Why is a single cycle CPU inefficient?
+    Not all instructions exercise the critical path. It is not parallelized. Each component can be active concurrently.
+5. How can you improve its performance?
+    Pipelining: Put pipeline registers between two datapath stages. -> reduce the clock time

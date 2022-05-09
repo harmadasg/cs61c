@@ -1,0 +1,57 @@
+CS 61C Homework 4
+Name:
+Login:
+
+
+P1- Waveform Diagrams
+1)	5
+2)	3	
+3)	5ns
+4)	65ns
+
+
+
+P2 - Clock Frequency
+1)	Yes, the given clock rate (100 MHz) requires 10 ns to complete the CL
+2)	clk-to-q: 3ns + 2 * adder propagation: 1ns + register setup time 2ns = 7 ns -> 142 MHz
+3)	First add up Xi and Yi, then add up the previous result and Si-1 so we get Si. In this diagram, total delay includes clk-to-q: 3ns, adder propagation: 1ns, register setup time 2ns. Total: 6ns.
+
+
+
+P3 - Simple FSM and Truth Tables
+
+CurState	| Input	| NextState	| Output
+Start	| 00| 	0	| 		00	|	0
+Start	| 00| 	1	|		01	|	0 
+Seen1	| 01|	0	|		00	|	0 
+Seen1	| 01| 	1	| 		10	|	1
+Seen11	| 10|	0	|		00	|	1 
+Seen11	| 10|	1 	|		10	|	1 
+
+//you can add more rows if necessary
+
+
+
+P4 - Truth Tables, Boolean Algebra, FSMs, Logic Circuits
+1)
+
+Out =	!Curr1 * Curr0 * !Input
+
+Next1 = !Curr1 * Input
+
+Next0 =	!Input
+
+2)
+
+/*
+	Called once per "clock cycle."
+	Assume input x is 0 or 1.
+	Updates state and outputs FSM output (0 or 1).
+*/
+int fsmCompute(int x) {
+	int retval;
+	static unsigned int state = 0x1;
+	retval = !x && state == 0x1;
+	state = (state < 0x2 && x) << 1 | !x;
+	return retval;
+}
