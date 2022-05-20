@@ -1,0 +1,11 @@
+non-pipelined:
+
+    5 + 55 + 50 = 110 nanoseconds
+    1 / 110 = 9,09 MHz
+
+pipelined:
+
+    5 + 55 = 60 nanoseconds
+    1 / 60 = 16,67 MHz
+
+    we have only 2 stages, so the maximum wait time is 1 cycle
