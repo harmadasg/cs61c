@@ -1,0 +1,8 @@
+Which ordering(s) perform best for 1000-by-1000 matrices?
+    jki and kji
+Which ordering(s) perform the worst?
+    ikj and kij
+How does the way we stride through the matrices with respect to the innermost loop affect performance?
+    we have to try exploit spatial and temporal locality as much as possible, with moderate n sizes the stride n iterations use the cache inefficiently
+    e.g. ikj ordering: C matrix stride 1 (spatial), A matrix stride 1 (spatial), B matrix stride 0 (temporal), and no stride n accesses!
+

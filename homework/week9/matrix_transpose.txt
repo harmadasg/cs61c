@@ -1,0 +1,14 @@
+Fix the blocksize to be 20, and run your code with n equal to 100, 1000, 2000, 5000, and 10000.
+
+At what point does cache blocked version of transpose become faster than the non-cache blocked version?
+    Around n = 1000
+Why does cache blocking require the matrix to be a certain size before it outperforms the non-cache blocked code?
+    Because if the matrix size is small enough, it can entirely be store into the cache. In this case, there is no cache block replacement occur in each situation, so the performance of these 2 version are almost the same. But as the matrix size grows, the cache blocked version causes less block replacement, thus outperforms the other version.
+
+
+Fix n to be 10000, and run your code with blocksize equal to 50, 100, 500, 1000, 5000.
+
+How does performance change as the blocksize increases?
+    The performance drops along with the blocksize grows.
+Why is this the case?
+    Because when blocksize gets larger the cache can't hold the items in the current block. As the blocksize grows to the matrix dimension, it degenerate into the naive version. So the performance of the 2 should intersect when the blocksize reach 10000.

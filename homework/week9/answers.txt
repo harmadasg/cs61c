@@ -1,0 +1,82 @@
+Scenario 1: (using cache.s)
+
+Cache Parameters:
+
+    Placement Policy: Direct Mapping
+    Block Replacement Policy: LRU
+    Set size (blocks): 1 (MARS won't let you change this, why?)
+    Number of blocks: 4
+    Cache block size (words): 2
+
+Program Parameters:
+
+    Array Size: 128
+    Step Size: 8
+    Rep Count: 4
+    Option: 0
+
+Questions:
+
+1. What combination of parameters is producing the hit rate you observe? (Hint: Your answer should be of the form: "Because parameter A == parameter B")
+    0% hit rate; conflict misses; the set bits (3-4) are always pointing to the first block because we are making 32 byte long jumps.
+
+2. What is our hit rate if we increase Rep Count arbitrarily? Why?
+    Stays 0% because we are always accessing the same elements.
+
+3. How could we modify our program parameters to maximize our hit rate?
+    step size = 32 (only 1 element get accessed in each repetition)
+
+
+Scenario 2: (using cache.s)
+
+Cache Parameters:
+
+    Placement Policy: N-way Set Associative
+    Block Replacement Policy: LRU
+    Set size (blocks): 4
+    Number of blocks: 16
+    Cache block size (words): 4
+
+Program Parameters:
+
+    Array Size: 256
+    Step Size: 2
+    Rep Count: 1
+    Option: 1
+
+Questions:
+
+1. Explain the hit rate in terms of the parameters of the cache and the program.
+    75% hit rate; block size is big enough to store values for 2 iterations (2 accesses per iteration, first one is always a compulsory miss)
+
+2. What happens to our hit rate as Rep Count goes to infinity? Why?
+    Goes to infinity as well because the whole array fits in the cache (256 bytes)
+
+3. Suppose we have a program that uses a very large array and during each Rep, we apply a different operator to the elements of our array (e.g. if Rep Count = 1024, we apply 1024 different operations to each of the array elements). How can we restructure our program to achieve a hit rate like that achieved in this scenario? (Assume that the number of operations we apply to each element is very large and that the result for each element can be computed independently of the other elements.) What is this technique called? (Hint)
+    block iteration
+
+
+Scenario 3:
+
+For the final scenario, we'll be using a new file: wackycache.s. Open it up in MARS and read through the pseudocode to make sure you understand what's happening.
+
+Cache Parameters:
+
+    Placement Policy: N-way Set Associative
+    Block Replacement Policy: LRU
+    Set size (blocks): 4
+    Number of blocks: 16
+    Cache block size (words): 4
+
+Program Parameters:
+
+    Array Size: 256
+    Step Size: 8
+    Rep Count: 2
+
+Questions:
+
+1. Run the simulation a few times. Note that the hit rate is non-deterministic. Why is this the case? Explain in terms of the cache parameters and our access pattern. ("The program is accessing random indicies" is not a sufficient answer).
+    Cache loads 4 words from memory (16 bytes), step range is 32 bytes, with the random offset the cache can contain a value for the next iteration (e.g. 1 word from prev iteration, 3 word in next iteration)
+2. Which Cache parameter can you modify in order to get a constant hit rate? Record the parameter and its value (and be prepared to show your TA a few runs of the simulation). How does this parameter allow us to get a constant hit rate?
+    Block size = 16 words, we can also reduce number of blockes to 4 to retain the 256 bytes cache size.

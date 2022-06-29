@@ -1,0 +1,69 @@
+1. Direct mapped caches
+
+How many bytes of data can our cache hold?
+	8
+How many words?
+	2
+	
+Fill in the “Tag bits, Index bits, Offset bits” with the correct T:I:O breakdown according to the
+diagram.
+	index bits: 1
+	offset bits: 2
+	tag bits: 29
+	
+Let’s say we have a 8192KiB cache with an 128B block size, what is the tag, index, and offset
+of 0xFEEDF00D?
+	offset: 000 1101
+	index: 1110 1101 1111 0000
+	tag: 1111 1110
+
+Fill in the table below. Assume we have a write-through cache, so the number of bits per row
+includes only the cache data, the tag, and the valid bit.
+
++---------------------+------------+------------+----------+------------+-------------+--------------+
+| Address size (bits) | Cache size | Block size | Tag bits | Index bits | Offset bits | Bits per row |
+|                     |            |            |          |            |             |              |
++---------------------+------------+------------+----------+------------+-------------+--------------+
+| 16                  | 4KiB       | 4B         | 4        | 10         | 2           | 37           |
++---------------------+------------+------------+----------+------------+-------------+--------------+
+| 32                  | 32KiB      | 16B        | 17       | 11         | 4           | 146          |
++---------------------+------------+------------+----------+------------+-------------+--------------+
+| 32                  | 64KiB      | 16B        | 16       | 12         | 4           | 145          |
++---------------------+------------+------------+----------+------------+-------------+--------------+
+| 64                  | 2048KiB    | 128B       | 43       | 14         | 7           | 1068         |
++---------------------+------------+------------+----------+------------+-------------+--------------+
+
+2. Cache hits and misses
+
+Assume we have the following cache. Classify each of the following byte memory accesses as a cache
+hit (H), cache miss (M), or cache miss with replacement (R). (size = 32B, block size = 3, index = 2, tag = 27)
+	0x00000004 - M
+	0x00000005 - H
+	0x00000068 - M
+	0x000000C8 - R
+	0x000000DD - M
+	0x00000045 - R
+	0x00000004 - R
+	0x000000C8 - H
+	
+3. Analyzing C Code
+
+How many bits make up a memory address on this computer?
+	20
+What is the T:I:O breakdown?
+	index = 4 bits
+	offset = 10 bits
+	tag = 6 bits
+Calculate the cache hit rate for the line marked Line 1:
+	50%. The integers are 4×128 = 512 bytes apart, which means that there are two accesses per
+	block. The first access is a cache miss, but the second access is a cache hit, because A[i] and A[i
+	+ 128] are in the same cache block.
+Calculate the cache hit rate for the line marked Line 2:
+	50%. At the end of line 1, we now have the second half of A inside our cache, so we get the
+	same hit rate as before. Note that we do not have to consider cache hits for total, since the
+	compiler will probably leave it in a register
+
+4. Average Memory Access Time
+
+Suppose that you have a cache system with the following properties. What is the AMAT?
+	The AMAT is 1 + 25%×(10 + 40%×(50)) + 6%×(100) = 14.5 cycles.
