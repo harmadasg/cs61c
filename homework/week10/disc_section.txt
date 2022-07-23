@@ -1,0 +1,39 @@
+1. Floating Point
+
+How many zeroes can be represented using a float?
+    2
+What is the largest finite positive value that can be stored using a single precision float?
+    0x7F7FFFFF = (2 – 2^-23) x 2^127
+What is the smallest positive value that can be stored using a single precision float?
+    0x00000001 = 2^-23 x 2^-126
+What is the smallest positive normalized value that can be stored using a single precision float?
+    0x00800000 = 2^-126
+Convert the following numbers from binary to decimal or from decimal to binary:
+    0x00000000 = 0
+    8.25 = 0x41040000
+    0x00000F00 = (2^-12 + 2^-13 + 2^-14 + 2^-15) x 2^-126
+    39.5625 = = 0x421E4000
+    0xFF94BEEF = NaN
+    -∞ = 0xFF800000
+
+2. AMAT
+
+What is the local miss rate of L2$?
+    25%
+What is the AMAT of the system?
+    2 + 0.2 * (15 + 0.25 * 100) = 10
+Suppose we want to reduce the AMAT of the system to 8 or lower by adding in a L3$. If the L3$ has
+a local miss rate of 30%, what is the largest hit time that the L3$ can have?
+    2 + 0.2 * (15 + 0.25 * (30 + 0.3 * 100)) = 8 -> hite time must be <= 30
+
+3. Flynn Taxonomy
+
+Explain SISD and give an example if available.
+    Single Instruction Single Data; each instruction is executed in order, acting on a single stream of data. For example, traditional computer programs.
+Explain SIMD and give an example if available.
+    Single Instruction Multiple Data; each instruction is executed in order, acting on multiple streams of data. For example, the SSE Intrinsics
+Explain MISD and give an example if available.
+    Multiple Instruction Single Data; multiple instructions are executed simultaneously, acting on a single stream of data. There are no good modern examples.
+Explain MIMD and give an example if available
+    Multiple Instruction Multiple Data; multiple instructions are executed simultaneously, acting on multiple streams of data. For example, map reduce or multithreaded programs.
+

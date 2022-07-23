@@ -1,0 +1,97 @@
+======= Problem 1 =======
+(a.1)
+tag = 4 bits
+set index = 10 bit
+block offset = 2 bit
+
+(a.2)
+Address | Cache Hit / Miss | Miss Type (Compulsory, Capacity, or Conflict)
+0x0000  |      MISS        |    Compulsory
+0x0004  |      MISS        |    Compulsory
+0x0008  |      MISS        |    Compulsory
+0x000c  |      MISS        |    Compulsory
+0x1000  |      MISS        |    Conflict
+0x1004  |      MISS        |    Conflict
+0x1008  |      MISS        |    Conflict
+0x100c  |      MISS        |    Conflict
+0x0000  |      MISS        |    Conflict
+0x0004  |      MISS        |    Conflict
+0x0008  |      MISS        |    Conflict
+0x000c  |      MISS        |    Conflict
+
+(a.3)
+Miss rate = 100%
+AMAT = 2 + 100% * 100 = 102 -> 51ns
+(no cache time) - AMAT = 100 - 102 = -2 -> -1ns (we are gaining this amount if we use cache)
+
+(b.1)
+tag = 4 bit
+set index = 9 bit
+block offset = 3 bit
+
+(b.2)
+Address | Cache Hit / Miss | Miss Type (Compulsory, Capacity, or Conflict)
+0x0000  |      MISS        |    Compulsory
+0x0004  |      HIT         |
+0x0008  |      MISS        |    Compulsory
+0x000c  |      HIT         |
+0x1000  |      MISS        |    Conflict
+0x1004  |      HIT         |
+0x1008  |      MISS        |    Conflict
+0x100c  |      HIT         |
+0x0000  |      MISS        |    Conflict
+0x0004  |      HIT         |
+0x0008  |      MISS        |    Conflict
+0x000c  |      HIT         |
+
+(b.3)
+miss rate = 50%
+hit time = 2
+miss time = 110
+AMAT = 2 + 50% * 110 = 57 -> 28.5ns
+(no cache time) - AMAT = 110 - 57 = 53 -> 27.5ns (we are gaining this amount if we use cache)
+
+(c.1)
+tag = 5 bit
+set index = 8 bit
+block offset = 3 bit
+
+(c.2)
+Address | Cache Hit / Miss | Miss Type (Compulsory, Capacity, or Conflict)
+0x0000  |      MISS        |    Compulsory
+0x0004  |      HIT         |
+0x0008  |      MISS        |    Compulsory
+0x000c  |      HIT         |
+0x1000  |      MISS        |    Compulsory
+0x1004  |      HIT         |
+0x1008  |      MISS        |    Compulsory
+0x100c  |      HIT         |
+0x0000  |      HIT         |
+0x0004  |      HIT         |
+0x0008  |      HIT         |
+0x000c  |      HIT         |
+
+(c.3)
+miss rate = 33.67%
+hit time =  3
+miss time = 110
+AMAT = 3 + 33.67% * 110 = 40 -> 20ns
+(no cache time) - AMAT = 110 - 40 = 70 -> 35ns (we are gaining this amount if we use cache)
+
+======= Problem 2 =======
+a. 130 560 total access, 768 hit -> 99,4% miss rate
+b. 12,5% miss rate
+c. yes because it reduces the write overhead. since the size is 1KiB a full iteration of the outer loop fits into the cache. So the cache only needs to write back the values once per outer loop iteration.
+
+// for (int i = 0 ; i < 65536 ; i+=256) {
+//   for (int j = 1 ; j < 256 ; j++) {
+//     array[i] += array[j + i];
+//   }
+// }
+
+======= Problem 3 =======
+a. 0xc2298000
+b. -1.6328125*2^39 = 897 648 164 864
+c. 2^mantissa bits+1 + 1 = 16 777 217
+d. 2^-126
+e. 2^-149
