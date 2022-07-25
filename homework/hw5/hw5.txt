@@ -10,10 +10,10 @@ Address | Cache Hit / Miss | Miss Type (Compulsory, Capacity, or Conflict)
 0x0004  |      MISS        |    Compulsory
 0x0008  |      MISS        |    Compulsory
 0x000c  |      MISS        |    Compulsory
-0x1000  |      MISS        |    Conflict
-0x1004  |      MISS        |    Conflict
-0x1008  |      MISS        |    Conflict
-0x100c  |      MISS        |    Conflict
+0x1000  |      MISS        |    Compulsory
+0x1004  |      MISS        |    Compulsory
+0x1008  |      MISS        |    Compulsory
+0x100c  |      MISS        |    Compulsory
 0x0000  |      MISS        |    Conflict
 0x0004  |      MISS        |    Conflict
 0x0008  |      MISS        |    Conflict
@@ -35,9 +35,9 @@ Address | Cache Hit / Miss | Miss Type (Compulsory, Capacity, or Conflict)
 0x0004  |      HIT         |
 0x0008  |      MISS        |    Compulsory
 0x000c  |      HIT         |
-0x1000  |      MISS        |    Conflict
+0x1000  |      MISS        |    Compulsory
 0x1004  |      HIT         |
-0x1008  |      MISS        |    Conflict
+0x1008  |      MISS        |    Compulsory
 0x100c  |      HIT         |
 0x0000  |      MISS        |    Conflict
 0x0004  |      HIT         |
