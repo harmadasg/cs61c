@@ -1,0 +1,36 @@
+MOESI Cache Coherency
+
++------+-------------------+----------------+----------------+------------------------+------------------------+
+| Time |  After Operation  | P1 cache state | P2 cache state | Memory @ 0 up to date? | Memory @ 1 up to date? |
++------+-------------------+----------------+----------------+------------------------+------------------------+
+|    0 | P1: read block 1  | Exclusive (1)  | Invalid        | YES                    | YES                    |
+|    1 | P2: read block 1  | Owned (1)      | Shared (1)     | YES                    | YES                    |
+|    2 | P1: write block 1 | Modified (1)   | Invalid        | YES                    | NO                     |
+|    3 | P2: write block 1 | Invalid        | Modified (1)   | YES                    | NO                     |
+|    4 | P1: read block 0  | Exclusive (0)  | Modified (1)   | YES                    | NO                     |
+|    5 | P2: read block 0  | Owned (0)      | Shared (0)     | YES                    | YES                    |
+|    6 | P1: write block 0 | Modified (0)   | Invalid        | NO                     | YES                    |
+|    7 | P2: read block 0  | Owned (0)      | Shared (0)     | NO                     | YES                    |
+|    8 | P2: write block 0 | Invalid        | Modified (0)   | NO                     | YES                    |
+|    9 | P1: read block 0  | Shared (0)     | Owned (0)      | NO                     | YES                    |
++------+-------------------+----------------+----------------+------------------------+------------------------+
+
+Concurrency
+
+a)  Each thread needs to read the “current” value, perform an add/sub, and store a value for from-­‐>cents and to-­‐>cents. Two threads could read the same “current” value and the later storeessentially erases the other transaction at either line.
+b)  Wrap transferFunds in a critical section, or divide up the accounts array and for loop in a way that you can have separate threads work on different accounts
+
+Midterm floating point
+
+a)  Half as many because lost a significant bit
+b)  22 significand bits + sign bit but not counting +-0 so exactly (2^32)-2 denorms
+c)  8 MiB
+
+Midterm caches
+
+a)          tag 24, index 0, offset 8
+b)          read is compulsory miss, write hit within the loop 50%
+c)          for 1st loop miss on read, hit on write. for 2nd loop hits 75%
+d)  i)      associativity too low, capacity misses first entries replaced before 2nd loop -- no change
+    ii)     still too many replacements first entries replaced before 2nd loop -- no change
+    iii)    Still capacity misses first entries replaced before 2nd loop -- no change
