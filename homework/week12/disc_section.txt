@@ -1,0 +1,93 @@
+Amdahl’s Law
+1)	1 / ( (1 - 0.99) + 0.99/2 ) => (1 - 0.99) term is dominant => max speedup is x100
+
+Failure in a WSC
+1)	55,000 * 4 = 220,000 total diksk => 220,000 * 0.04 = 8,800 broken disks per year
+	=> 8,800 / 8765 = approx. 1 disk fails in every hour = MTTF
+
+2)	MTTF = 1, MTTR = 0.5 Availability = 1 / (1 + 0.5) = 2/3 = 66.6%
+
+Performance of a WSC
+1)	0.9 * 0.1 + 0.09 * 100 + 0.01 * 300 = 0.09 + 9 + 3 = 12.09
+	=> array access time dominates, extracting locality is crucial for wscs
+
+2)	1,000 / 200 = 5s vs 1,000 / 100 = 10s => bottleneck is network switches, data transfer is faster inside server
+
+Power Usage Effectiveness (PUE)
+1)	1.5 PUE * 1M * 200W * 0.06 dollars * 8765 hours = $157.77M/yr
+
+2)	(1.5 - 1.25) * 50,000 * 200W * 0.06 dollars * 8765 hours = $1.314M/yr savings
+
+Map Reduce
+1)
+	map(String student, CourseData value)
+		emit(student, value.studentGrade)
+
+	reduce(String key, Iterable<float> values)
+		sumOfGrades = 0
+		numberOfCourses = 0
+		for (grade in values)
+			sumOfGrades += grade
+			numberOfCourses++
+
+		emit(key, sumOfGrades/numberOfCourses)
+
+2)
+	map(int personID, list<int> friendIDs)
+		for(fID in friendIDs)
+			if (personID < fID)
+				friendPair = (personID, fID)
+			else
+				friendPair = (fID, personID)
+			emit(friendPair, friendIDs)
+
+	reduce(FriendPair key, Iterable<list<int>> values)
+		mutualFriends = intersection(values.next, values.next)
+		emit(key, mutualFriends)
+
+3)
+	map(String person, String coinType)
+		emit(CoinPair(person, coinType), 1)
+
+	reduce(CoinPair key, Iterable<int> values)
+		total = 0
+		for (count in values)
+			total += count
+		emit(key, total)
+
+4)
+	map(CoinPair key, int amount)
+		value = amount * valueOfCoin(key.coinType)
+		emit(key.person, value)
+
+	reduce(String key, Iterable<float> values)
+		sum = 0
+		for (amount in values)
+			sum += amount
+		emit(key, sum)
+
+Spark
+1)
+	# students: list((studentName, courseData))
+	studentsData = sc.parallelize(students)
+	out = studentsData.map(lambda (k, v): (k, (v.studentGrade, 1)))
+					  .reduceByKey(lambda (v1, v2): (v1[0] + v2[0], v1[1] + v2[1]))
+					  .map(lambda (k, v): (k, v[0] / v[1]))
+
+2)
+	def genFriendPairAndValue(pID, fIDs):
+		return [((pID, fID), fIDs) if pID < fID else (fID, pID) for fID in fIDs]
+	def intersection(l1, l2):
+		return [x for x in b1 if x in b2]
+	# persons: list((personID, list(friendID))
+	personsData = sc.parallelize(persons)
+	out = personsData.flatmap(lambda (k, v): genFriendPairAndValue(k, v))
+					 .reduceByKey(lambda (v1, v2): intersection(v1, v2))
+
+3)
+	# coinPairs: list((person, coinType))
+	coinData = sc.parallelize(coinPairs)
+	out = coinData.map(lambda(k, v): ((k, v), 1))
+				  .reduceByKey(lambda (v1, v2): v1 + v2)
+				  .map(lambda(k, v): (k[0], v * valueOfCoin(k[1])))
+				  .reduceByKey(lambda (v1, v2): v1 + v2)
