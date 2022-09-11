@@ -18,6 +18,24 @@
 // Include OpenMP
 #include <omp.h>
 
+
+#define L0_DEPTH 3
+#define L0_SX 32
+#define L0_SY 32
+#define FILTER_SX 5
+#define FILTER_SY 5
+#define L0_FILTERS 16
+#define STRIDE 1
+#define PAD 2
+#define L3_SX 16
+#define L3_SY 16
+#define L3_FILTERS 20
+#define L3_DEPTH 16
+#define L6_SX 8
+#define L6_SY 8
+#define L6_FILTERS 20
+#define L6_DEPTH 20
+
 // Helper functions -----------------------------------------------------------
 
 /*
@@ -183,36 +201,248 @@ conv_layer_t* make_conv_layer(int in_sx, int in_sy, int in_depth,
   return l;
 }
 
-void conv_forward(conv_layer_t* l, vol_t** in, vol_t** out, int start, int end) {
+void calc_sum(vol_t* f, vol_t* V, int fx, int fy, int ox, int oy, __m256d* vector_sum) {
+  if(oy >= 0 && oy < L0_SY && ox >=0 && ox < L0_SX) {
+    int f_start = ((FILTER_SX * fy)+fx) * L0_DEPTH;
+    int V_start = ((L0_SX * oy)+ox) * L0_DEPTH;
+
+    __m256d multiplicand = _mm256_loadu_pd(f->w + f_start);
+    __m256d multipllicator = _mm256_loadu_pd(V->w + V_start);
+    __m256d product = _mm256_mul_pd(multiplicand, multipllicator);
+    *vector_sum = _mm256_add_pd(*vector_sum, product);
+  }
+}
+
+// The conv_forward_1 funciton handles the range 2..30, 2..30. Here the other cases have to be covered including
+//  0..2,   0..32
+//  0..32,  0..2
+//  30..32, 0..32
+//  0..32,  30..32
+// With a bit more code all the 4 variations are done through only one loop
+void handle_corner_cases(vol_t* f, vol_t* V, vol_t* A, conv_layer_t* l, int d) {
+  for(int ay = 0; ay < 2; ay++) {
+    for(int ax = 0; ax < 32; ax++) {
+      __m256d vector_sum0 = _mm256_setzero_pd();
+      __m256d vector_sum1 = _mm256_setzero_pd();
+      __m256d vector_sum2 = _mm256_setzero_pd();
+      __m256d vector_sum3 = _mm256_setzero_pd();
+      double*  sum0 = (double*) &vector_sum0;
+      double*  sum1 = (double*) &vector_sum1;
+      double*  sum2 = (double*) &vector_sum2;
+      double*  sum3 = (double*) &vector_sum3;
+      for(int fy = 0; fy < FILTER_SY; fy++) {
+        int oy0 = ay + fy - PAD;
+        int oy1 = ax + fy - PAD;
+        int oy2 = ay + fy - PAD + 30;
+        int oy3 = ax + fy - PAD;
+        for(int fx = 0; fx < FILTER_SX; fx++) {
+          int ox0 = ax + fx - PAD;
+          int ox1 = ay + fx - PAD;
+          int ox2 = ax + fx - PAD;
+          int ox3 = ay + fx - PAD + 30;
+
+          calc_sum(f, V, fx, fy, ox0, oy0, &vector_sum0);
+          calc_sum(f, V, fx, fy, ox1, oy1, &vector_sum1);
+          calc_sum(f, V, fx, fy, ox2, oy2, &vector_sum2);
+          calc_sum(f, V, fx, fy, ox3, oy3, &vector_sum3);
+        }
+      }
+      // Since the initial depth is 3, only the first 3 values are being used in the array
+      double value0 = sum0[0] + sum0[1] + sum0[2];
+      double value1 = sum1[0] + sum1[1] + sum1[2];
+      double value2 = sum2[0] + sum2[1] + sum2[2];
+      double value3 = sum3[0] + sum3[1] + sum3[2];
+      set_vol(A, ax, ay, d, value0 + l->biases->w[d]);
+      set_vol(A, ay, ax, d, value1 + l->biases->w[d]);
+      set_vol(A, ax, ay + 30, d, value2 + l->biases->w[d]);
+      set_vol(A, ay + 30, ax, d, value3 + l->biases->w[d]);
+    }
+  }
+}
+
+// Optimized forward function for layer 0
+void conv_forward_1(conv_layer_t* l, vol_t** in, vol_t** out, int start, int end) {
   for (int i = start; i <= end; i++) {
     vol_t* V = in[i];
     vol_t* A = out[i];
-        
-    int V_sx = V->sx;
-    int V_sy = V->sy;
-    int xy_stride = l->stride;
-  
-    for(int d = 0; d < l->out_depth; d++) {
+
+    for(int d = 0; d < L0_FILTERS; d++) {
       vol_t* f = l->filters[d];
-      int x = -l->pad;
-      int y = -l->pad;
-      for(int ay = 0; ay < l->out_sy; y += xy_stride, ay++) {
-        x = -l->pad;
-        for(int ax=0; ax < l->out_sx; x += xy_stride, ax++) {
-          double a = 0.0;
-          for(int fy = 0; fy < f->sy; fy++) {
-            int oy = y + fy;
-            for(int fx = 0; fx < f->sx; fx++) {
-              int ox = x + fx;
-              if(oy >= 0 && oy < V_sy && ox >=0 && ox < V_sx) {
-                for(int fd=0;fd < f->depth; fd++) {
-                  a += f->w[((f->sx * fy)+fx)*f->depth+fd] * V->w[((V_sx * oy)+ox)*V->depth+fd];
-                }
+
+      // In order to achieve a bigger loop unrolling, this part only processes the 2..30, 2..30 range
+      // where the below condition is always true
+      // oy >= 0 && oy < V_sy && ox >=0 && ox < V_sx
+      for(int ay = 2; ay < 30; ay++) {
+        for(int ax = 2; ax < 30; ax++) {
+          // The initial dimensions (depth = 3 and fx = 5) allow to process 3 * 5 = 15 values at once
+          __m256d vector_sum0 = _mm256_setzero_pd();
+          __m256d vector_sum1 = _mm256_setzero_pd();
+          __m256d vector_sum2 = _mm256_setzero_pd();
+          __m256d vector_sum3 = _mm256_setzero_pd();
+          // Declare arrays to easily access the contents of the vectors
+          double*  sum0 = (double*) &vector_sum0;
+          double*  sum1 = (double*) &vector_sum1;
+          double*  sum2 = (double*) &vector_sum2;
+          double*  sum3 = (double*) &vector_sum3;
+          for(int fy = 0; fy < FILTER_SY; fy++) {
+            int oy = ay + fy - PAD;
+            int ox = ax - PAD;
+            int f_start = ((FILTER_SX * fy)) * L0_DEPTH;
+            int V_start = ((L0_SX * oy)+ox) * L0_DEPTH;
+            // The actual computation with the intrinsic functions with a 4x4 unrolling
+            __m256d multiplicand = _mm256_loadu_pd(f->w + f_start);
+            __m256d multipllicator = _mm256_loadu_pd(V->w + V_start);
+            __m256d product = _mm256_mul_pd(multiplicand, multipllicator);
+            vector_sum0 = _mm256_add_pd(vector_sum0, product);
+
+            multiplicand = _mm256_loadu_pd(f->w + f_start + 4);
+            multipllicator = _mm256_loadu_pd(V->w + V_start + 4);
+            product = _mm256_mul_pd(multiplicand, multipllicator);
+            vector_sum1 = _mm256_add_pd(vector_sum1, product);
+
+            multiplicand = _mm256_loadu_pd(f->w + f_start + 8);
+            multipllicator = _mm256_loadu_pd(V->w + V_start + 8);
+            product = _mm256_mul_pd(multiplicand, multipllicator);
+            vector_sum2 = _mm256_add_pd(vector_sum2, product);
+
+            multiplicand = _mm256_loadu_pd(f->w + f_start + 12);
+            multipllicator = _mm256_loadu_pd(V->w + V_start + 12);
+            product = _mm256_mul_pd(multiplicand, multipllicator);
+            vector_sum3 = _mm256_add_pd(vector_sum3, product);
+          }
+          // Only 15 values are being processed so 4th value in the last array is ignored
+          double value = sum0[0] + sum0[1] + sum0[2] + sum0[3];
+          value += sum1[0] + sum1[1] + sum1[2] + sum1[3];
+          value += sum2[0] + sum2[1] + sum2[2] + sum2[3];
+          value += sum3[0] + sum3[1] + sum3[2];
+          set_vol(A, ax, ay, d, value +  l->biases->w[d]);
+            }
+          }
+      // This funciton handles the the part when the mentioned condition is not always true
+      handle_corner_cases(f, V, A, l, d);
+    }
+  }
+}
+
+// Optimized forward function for layer 3
+void conv_forward_2(conv_layer_t* l, vol_t** in, vol_t** out, int start, int end) {
+  for (int i = start; i <= end; i++) {
+    vol_t* V = in[i];
+    vol_t* A = out[i];
+
+    for(int d = 0; d < L3_FILTERS; d++) {
+      vol_t* f = l->filters[d];
+      for(int ay = 0; ay < L3_SY; ay++) {
+        for(int ax = 0; ax < L3_SX; ax++) {
+          __m256d vector_sum0 = _mm256_setzero_pd();
+          __m256d vector_sum1 = _mm256_setzero_pd();
+          __m256d vector_sum2 = _mm256_setzero_pd();
+          __m256d vector_sum3 = _mm256_setzero_pd();
+          double*  sum0 = (double*) &vector_sum0;
+          double*  sum1 = (double*) &vector_sum1;
+          double*  sum2 = (double*) &vector_sum2;
+          double*  sum3 = (double*) &vector_sum3;
+          for(int fy = 0; fy < FILTER_SY; fy++) {
+            int oy = ay + fy - PAD;
+            for(int fx = 0; fx < FILTER_SX; fx++) {
+              int ox = ax + fx - PAD;
+              // The actual computation with the intrinsic functions with a 4x4 unrolling since the current value for depth is 16
+              // The optimization in forward_1 would work here as well, might implement it later
+              if(oy >= 0 && oy < L3_SY && ox >=0 && ox < L3_SX) {
+                int f_start = ((FILTER_SX * fy) + fx) * L3_DEPTH;
+                int V_start = ((L3_SX * oy) + ox) * L3_DEPTH;
+
+                __m256d multiplicand0 = _mm256_loadu_pd(f->w + f_start);
+                __m256d multipllicator0 = _mm256_loadu_pd(V->w + V_start);
+                __m256d product0 = _mm256_mul_pd(multiplicand0, multipllicator0);
+                __m256d multiplicand1 = _mm256_loadu_pd(f->w + f_start + 4);
+                __m256d multipllicator1 = _mm256_loadu_pd(V->w + V_start + 4);
+                __m256d product1 = _mm256_mul_pd(multiplicand1, multipllicator1);
+                __m256d multiplicand2 = _mm256_loadu_pd(f->w + f_start + 8);
+                __m256d multipllicator2 = _mm256_loadu_pd(V->w + V_start + 8);
+                __m256d product2 = _mm256_mul_pd(multiplicand2, multipllicator2);
+                __m256d multiplicand3 = _mm256_loadu_pd(f->w + f_start + 12);
+                __m256d multipllicator3 = _mm256_loadu_pd(V->w + V_start + 12);
+                __m256d product3 = _mm256_mul_pd(multiplicand3, multipllicator3);
+
+                vector_sum0 = _mm256_add_pd(vector_sum0, product0);
+                vector_sum1 = _mm256_add_pd(vector_sum1, product1);
+                vector_sum2 = _mm256_add_pd(vector_sum2, product2);
+                vector_sum3 = _mm256_add_pd(vector_sum3, product3);
               }
             }
           }
-          a += l->biases->w[d];
-          set_vol(A, ax, ay, d, a);
+          double value = sum0[0] + sum0[1] + sum0[2] + sum0[3];
+          value += sum1[0] + sum1[1] + sum1[2] + sum1[3];
+          value += sum2[0] + sum2[1] + sum2[2] + sum2[3];
+          value += sum3[0] + sum3[1] + sum3[2] + sum3[3];
+          set_vol(A, ax, ay, d, value + l->biases->w[d]);
+        }
+      }
+    }
+  }
+}
+
+// Optimized forward function for layer 6
+void conv_forward_3(conv_layer_t* l, vol_t** in, vol_t** out, int start, int end) {
+  for (int i = start; i <= end; i++) {
+    vol_t* V = in[i];
+    vol_t* A = out[i];
+
+    for(int d = 0; d < L6_FILTERS; d++) {
+      vol_t* f = l->filters[d];
+      for(int ay = 0; ay < L6_SY; ay++) {
+        for(int ax = 0; ax < L6_SY; ax++) {
+          __m256d vector_sum0 = _mm256_setzero_pd();
+          __m256d vector_sum1 = _mm256_setzero_pd();
+          __m256d vector_sum2 = _mm256_setzero_pd();
+          __m256d vector_sum3 = _mm256_setzero_pd();
+          __m256d vector_sum4 = _mm256_setzero_pd();
+          double*  sum0 = (double*) &vector_sum0;
+          double*  sum1 = (double*) &vector_sum1;
+          double*  sum2 = (double*) &vector_sum2;
+          double*  sum3 = (double*) &vector_sum3;
+          double*  sum4 = (double*) &vector_sum4;
+          for(int fy = 0; fy < FILTER_SY; fy++) {
+            int oy = ay + fy - PAD;
+            for(int fx = 0; fx < FILTER_SX; fx++) {
+              int ox = ax + fx - PAD;
+              // The actual computation with the intrinsic functions with a 5x4 unrolling since the current value for depth is 20
+              // The optimization in forward_1 would work here as well, might implement it later
+              if(oy >= 0 && oy < L6_SY && ox >= 0 && ox < L6_SX) {
+                int f_start = ((FILTER_SX * fy) + fx) * L6_DEPTH;
+                int V_start = ((L6_SX * oy)+ ox) * L6_DEPTH;
+
+                __m256d multiplicand0 = _mm256_loadu_pd(f->w + f_start);
+                __m256d multipllicator0 = _mm256_loadu_pd(V->w + V_start);
+                __m256d product0 = _mm256_mul_pd(multiplicand0, multipllicator0);
+                __m256d multiplicand1 = _mm256_loadu_pd(f->w + f_start + 4);
+                __m256d multipllicator1 = _mm256_loadu_pd(V->w + V_start + 4);
+                __m256d product1 = _mm256_mul_pd(multiplicand1, multipllicator1);
+                __m256d multiplicand2 = _mm256_loadu_pd(f->w + f_start + 8);
+                __m256d multipllicator2 = _mm256_loadu_pd(V->w + V_start + 8);
+                __m256d product2 = _mm256_mul_pd(multiplicand2, multipllicator2);
+                __m256d multiplicand3 = _mm256_loadu_pd(f->w + f_start + 12);
+                __m256d multipllicator3 = _mm256_loadu_pd(V->w + V_start + 12);
+                __m256d product3 = _mm256_mul_pd(multiplicand3, multipllicator3);
+                __m256d multiplicand4 = _mm256_loadu_pd(f->w + f_start + 16);
+                __m256d multipllicator4 = _mm256_loadu_pd(V->w + V_start + 16);
+                __m256d product4 = _mm256_mul_pd(multiplicand4, multipllicator4);
+
+                vector_sum0 = _mm256_add_pd(vector_sum0, product0);
+                vector_sum1 = _mm256_add_pd(vector_sum1, product1);
+                vector_sum2 = _mm256_add_pd(vector_sum2, product2);
+                vector_sum3 = _mm256_add_pd(vector_sum3, product3);
+                vector_sum4 = _mm256_add_pd(vector_sum4, product4);
+              }
+            }
+          }
+          double value = sum0[0] + sum0[1] + sum0[2] + sum0[3];
+          value += sum1[0] + sum1[1] + sum1[2] + sum1[3];
+          value += sum2[0] + sum2[1] + sum2[2] + sum2[3];
+          value += sum3[0] + sum3[1] + sum3[2] + sum3[3];
+          value += sum4[0] + sum4[1] + sum4[2] + sum4[3];
+          set_vol(A, ax, ay, d, value + l->biases->w[d]);
         }
       }
     }
@@ -550,20 +780,20 @@ typedef struct network {
 
 network_t* make_network() {
   network_t* net = (network_t*)malloc(sizeof(network_t));
-  net->v[0] = make_vol(32, 32, 3, 0.0);
-  net->l0 = make_conv_layer(32, 32, 3, 5, 16, 1, 2);
+  net->v[0] = make_vol(L0_SX, L0_SY, L0_DEPTH, 0.0);
+  net->l0 = make_conv_layer(L0_SX, L0_SY, L0_DEPTH, FILTER_SX, L0_FILTERS, STRIDE, PAD);
   net->v[1] = make_vol(net->l0->out_sx, net->l0->out_sy, net->l0->out_depth, 0.0);
   net->l1 = make_relu_layer(net->v[1]->sx, net->v[1]->sy, net->v[1]->depth);
   net->v[2] = make_vol(net->l1->out_sx, net->l1->out_sy, net->l1->out_depth, 0.0);
   net->l2 = make_pool_layer(net->v[2]->sx, net->v[2]->sy, net->v[2]->depth, 2, 2);
   net->v[3] = make_vol(net->l2->out_sx, net->l2->out_sy, net->l2->out_depth, 0.0);
-  net->l3 = make_conv_layer(net->v[3]->sx, net->v[3]->sy, net->v[3]->depth, 5, 20, 1, 2);
+  net->l3 = make_conv_layer(net->v[3]->sx, net->v[3]->sy, net->v[3]->depth, FILTER_SX, L3_FILTERS, STRIDE, PAD);
   net->v[4] = make_vol(net->l3->out_sx, net->l3->out_sy, net->l3->out_depth, 0.0);
   net->l4 = make_relu_layer(net->v[4]->sx, net->v[4]->sy, net->v[4]->depth);
   net->v[5] = make_vol(net->l4->out_sx, net->l4->out_sy, net->l4->out_depth, 0.0);
   net->l5 = make_pool_layer(net->v[5]->sx, net->v[5]->sy, net->v[5]->depth, 2, 2);
   net->v[6] = make_vol(net->l5->out_sx, net->l5->out_sy, net->l5->out_depth, 0.0);
-  net->l6 = make_conv_layer(net->v[6]->sx, net->v[6]->sy, net->v[6]->depth, 5, 20, 1, 2);
+  net->l6 = make_conv_layer(net->v[6]->sx, net->v[6]->sy, net->v[6]->depth, FILTER_SX, L6_FILTERS, STRIDE, PAD);
   net->v[7] = make_vol(net->l6->out_sx, net->l6->out_sy, net->l6->out_depth, 0.0);
   net->l7 = make_relu_layer(net->v[7]->sx, net->v[7]->sy, net->v[7]->depth);
   net->v[8] = make_vol(net->l7->out_sx, net->l7->out_sy, net->l7->out_depth, 0.0);
@@ -646,15 +876,14 @@ void free_batch(batch_t* v, int size) {
  * as input to v and start/end are the first and the last image in that batch
  * to process (start and end are inclusive).
  */
-
 void net_forward(network_t* net, batch_t* v, int start, int end) {
-  conv_forward(net->l0, v[0], v[1], start, end);
+  conv_forward_1(net->l0, v[0], v[1], start, end);
   relu_forward(net->l1, v[1], v[2], start, end);
   pool_forward(net->l2, v[2], v[3], start, end);
-  conv_forward(net->l3, v[3], v[4], start, end);
+  conv_forward_2(net->l3, v[3], v[4], start, end);
   relu_forward(net->l4, v[4], v[5], start, end);
   pool_forward(net->l5, v[5], v[6], start, end);
-  conv_forward(net->l6, v[6], v[7], start, end);
+  conv_forward_3(net->l6, v[6], v[7], start, end);
   relu_forward(net->l7, v[7], v[8], start, end);
   pool_forward(net->l8, v[8], v[9], start, end);
   fc_forward(net->l9, v[9], v[10], start, end);
@@ -669,18 +898,44 @@ void net_forward(network_t* net, batch_t* v, int start, int end) {
  * of "cat" is larger than 50%. Writes the cat likelihood for all images into
  * an output array (0 = definitely no cat, 1 = definitely cat).
  */
-
 #define CAT_LABEL 3
 void net_classify_cats(network_t* net, vol_t** input, double* output, int n) {
-  batch_t* batch = make_batch(net, 1);
+  int max_threads = omp_get_max_threads();
+  int num_threads = n < max_threads ? n : max_threads;
+  int batch_size = n / num_threads;
 
-  for (int i = 0; i < n; i++) {
-    copy_vol(batch[0][0], input[i]);
-    net_forward(net, batch, 0, 0);
-    output[i] = batch[11][0]->w[CAT_LABEL]; 
+    #pragma omp parallel num_threads(num_threads)
+	{
+      int tid = omp_get_thread_num();
+      batch_t* batch = make_batch(net, batch_size);
+      int start = tid * batch_size;
+
+      for (int i = 0; i < batch_size; i++) {
+        copy_vol(batch[0][i], input[start + i]);
+      }
+
+      net_forward(net, batch, 0, batch_size - 1);
+
+      for (int i = 0; i < batch_size; i++) {
+        output[start + i] = batch[11][i]->w[CAT_LABEL];
+      }
+
+      free_batch(batch, batch_size);
+    }
+
+  int lastProcessed = batch_size * num_threads;
+  int leftovers = n - lastProcessed;
+  if (leftovers) {
+    #pragma omp parallel num_threads(leftovers)
+    {
+      int tid = omp_get_thread_num();
+      batch_t* batch = make_batch(net, 1);
+      copy_vol(batch[0][0], input[lastProcessed + tid]);
+      net_forward(net, batch, 0, 0);
+      output[lastProcessed + tid] = batch[11][0]->w[CAT_LABEL];
+      free_batch(batch, 1);
+    }
   }
-
-  free_batch(batch, 1);
 }
 
 // IGNORE EVERYTHING BELOW THIS POINT -----------------------------------------
