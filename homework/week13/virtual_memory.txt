@@ -1,0 +1,17 @@
+Exercise 1: A Sample Run (CAMERA)
+	Randomly generated memory access sequence: B1, 2C, 41, 11, 5D, 9B, B6, FB, 22, A6
+	2 TLB hits; 8 TLB misses
+	0 page hits; 8 page faults
+	0 page hits because the number physical frames and TLB entries are equal, so whenever there is a TLB miss a page fault also occurs
+	
+Exercise 2: MISS! (CAMERA)	
+	Memory access sequence: 20, 40, 60, 80, A0, C0, E0, 20, 40, 60
+	Since page size is 128 bytes (5 bit offset), the last 5 bits have to be always zero. So we are making 32 long jumps
+	
+Exercise 3: Memory Systems Engineering (CAMERA)
+	Problem is that the TLB size is the same as the number of physical frames. So either we should add more memory or decrease the TLB size
+	
+Exercise 4: Putting it all in Context (VMSIM)
+	P1, P2, P3 and P4 are processor cores in a multi-processor environment	
+	CAMERA only used 1 processor so the content of the TLB never has to be flushed
+	In VMSIM the TLB has to be invalidated every time we switch between processors, so the TLB hit rate is much smaller

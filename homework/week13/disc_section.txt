@@ -1,0 +1,107 @@
+Virtual Memory
+
+1) What are three specific benefits of using virtual memory?
+	gives illusion to processes they operate on the entire memory alone
+	easy way to ensure protection between multiple processes
+	bridge between memory and slower storages (hdd ,ssd)
+
+2) What should happen to the TLB when a new value is loaded into the page table address register?
+	every process has a seperate page table.
+	when a new value is loaded into the page table address register context switching happens
+	every entry has to be invalidated by setting the valid tag to false
+	reason is that the entries correspond to the old page table
+
+3) Fill in the following formulas below
+	#Offset Bits = log2(page size in bytes)
+	#Virtual Address Bits = #(VPN Bits) + #(Page Offset bits)
+	#Physical Address Bits = #(PPN Bits) + #(Page Offset bits)
+	#Bits per row of PT = #(PPN Bits) + #(Extra bits [valid, dirty bits, etc.])
+
+4) Fill this table out
+
+	+======================+=======================+===========+==========+==========+===================================+
+	| Virtual Address Bits | Physical Address Bits | Page Size | VPN Bits | PPN Bits | Bits per row of PT (4 extra bits) |
+	+======================+=======================+===========+==========+==========+===================================+
+	|                   32 |                    32 | 16KiB     |       18 |       18 |                                22 |
+	+----------------------+-----------------------+-----------+----------+----------+-----------------------------------+
+	|                   32 |                    26 | 8KiB      |       19 |       13 |                                17 |
+	+----------------------+-----------------------+-----------+----------+----------+-----------------------------------+
+	|                   36 |                    32 | 32KiB     |       21 |       17 |                                21 |
+	+----------------------+-----------------------+-----------+----------+----------+-----------------------------------+
+	|                   40 |                    36 | 32KiB     |       25 |       21 |                                25 |
+	+----------------------+-----------------------+-----------+----------+----------+-----------------------------------+
+	|                   64 |                    40 | 64KiB     |       48 |       24 |                                28 |
+	+----------------------+-----------------------+-----------+----------+----------+-----------------------------------+
+
+5) A processor has 16-bit addresses, 256 byte pages, and an 8-entry fully associative TLB with
+LRU replacement (the LRU field is 3 bits and encodes the order in which pages were accessed, 0
+being the most recent). At some time instant, the TLB for the current process is the initial state
+given in the table below. Assume that all current page table entries are in the initial TLB.
+Assume also that all pages can be read from and written to. Fill in the final state of the TLB
+according to the access pattern below.
+
+Free physical pages: 0x17, 0x18, 0x19
+
+Access pattern:
++-------+--------+
+| Read  | 0x11f0 |
++-------+--------+
+| Write | 0x1301 |
++-------+--------+
+| Write | 0x20ae |
++-------+--------+
+| Write | 0x2332 |
++-------+--------+
+| Read  | 0x20ff |
++-------+--------+
+| Write | 0x3415 |
++-------+--------+
+
+Initial TLB
++======+======+=======+=======+=====+
+| VPN  | PPN  | Valid | Dirty | LRU |
++======+======+=======+=======+=====+
+| 0x01 | 0x11 |     1 |     1 |   0 |
++------+------+-------+-------+-----+
+| 0x00 | 0x00 |     0 |     0 |   7 |
++------+------+-------+-------+-----+
+| 0x10 | 0x13 |     1 |     1 |   1 |
++------+------+-------+-------+-----+
+| 0x20 | 0x12 |     1 |     0 |   5 |
++------+------+-------+-------+-----+
+| 0x00 | 0x00 |     0 |     0 |   7 |
++------+------+-------+-------+-----+
+| 0x11 | 0x14 |     1 |     0 |   4 |
++------+------+-------+-------+-----+
+| 0xac | 0x15 |     1 |     1 |   2 |
++------+------+-------+-------+-----+
+| 0xff | 0x16 |     1 |     0 |   3 |
++------+------+-------+-------+-----+
+
+	Read 0x11f0: hit, LRUs: 1,7,2,5,7,0,3,4
+	Write 0x1301: miss, map VPN 0x13 to PPN 0x17, valid and dirty, LRUs: 2,0,3,6,7,1,4,5
+	Write 0x20ae: hit, dirty, LRUs: 3,1,4,0,7,2,5,6
+	Write 0x2332: miss, map VPN 0x23 to PPN 0x18, valid and dirty, LRUs: 4,2,5,1,0,3,6,7
+	Read 0x20ff: hit, LRUs: 4,2,5,0,1,3,6,7
+	Write 0x3415: miss and replace last entry, map VPN 0x34 to 0x19, dirty, LRUs, 5,3,6,1,2,4,7,0
+
+	Final TLB
+	+======+======+=======+=======+=====+
+	| VPN  | PPN  | Valid | Dirty | LRU |
+	+======+======+=======+=======+=====+
+	| 0x01 | 0x11 |     1 |     1 |   5 |
+	+------+------+-------+-------+-----+
+	| 0x13 | 0x17 |     1 |     1 |   3 |
+	+------+------+-------+-------+-----+
+	| 0x10 | 0x13 |     1 |     1 |   6 |
+	+------+------+-------+-------+-----+
+	| 0x20 | 0x12 |     1 |     1 |   1 |
+	+------+------+-------+-------+-----+
+	| 0x23 | 0x18 |     1 |     1 |   2 |
+	+------+------+-------+-------+-----+
+	| 0x11 | 0x14 |     1 |     0 |   4 |
+	+------+------+-------+-------+-----+
+	| 0xac | 0x15 |     1 |     1 |   7 |
+	+------+------+-------+-------+-----+
+	| 0x34 | 0x19 |     1 |     1 |   0 |
+	+------+------+-------+-------+-----+
