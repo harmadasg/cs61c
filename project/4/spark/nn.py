@@ -65,7 +65,10 @@ class NNClassifier(Classifier):
     Layer 2 : ReLU
     Layer 3 : linear
     """
-    return data.map(lambda (k, (x, y)): (k, (x, [np.zeros((x.shape[0], 2))], y))) # replace it with your code
+    return data.map(map_linear_forward(self.A1, self.b1, "is_first")) \
+        .map(map_ReLU_forward()) \
+        .map(map_linear_forward(self.A3, self.b3))
+
 
   def backward(self, data, count):
     """
@@ -85,11 +88,11 @@ class NNClassifier(Classifier):
     """ Todo: Implmenet backpropagation for Layer 1 """
 
     """ Todo: Reduce gradients """
-    L = 0.0
-    dLdA3 = np.zeros(self.A3.shape)
-    dLdb3 = np.zeros(self.b3.shape)
-    dLdA1 = np.zeros(self.A1.shape)
-    dLdb1 = np.zeros(self.b1.shape)
+    L, dLdA3, dLdb3, dLdX, dLdA1, dLdb1 = data.map(map_softmax_loss()) \
+            .map(map_linear_backward(self.A3, -2)) \
+            .map(map_ReLU_backward(-3)) \
+            .map(map_linear_backward(self.A1)) \
+            .reduce(reduce_nn)
 
     """ gradient scaling """
     L /= float(count)

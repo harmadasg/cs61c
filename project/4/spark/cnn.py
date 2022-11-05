@@ -155,7 +155,16 @@ class CNNClassifier(Classifier):
 
     """ TODO: Layer10: FC (1 x 1 x 10) forward """
 
-    return data.map(lambda (k, (x, y)): (k, (x, [(np.array([0]), np.array([0])), np.zeros((x.shape[0], 2))], y))) # replace it with your code
+    return data.map(map_conv_forward(self.A1, self.b1, self.S1, self.P1, "is_first")) \
+        .map(map_ReLU_forward("conv")) \
+        .map(map_max_pool_forward(self.F3, self.S3)) \
+        .map(map_conv_forward(self.A4, self.b4, self.S4, self.P4)) \
+        .map(map_ReLU_forward("conv")) \
+        .map(map_max_pool_forward(self.F6, self.S6)) \
+        .map(map_conv_forward(self.A7, self.b7, self.S7, self.P7)) \
+        .map(map_ReLU_forward("conv")) \
+        .map(map_max_pool_forward(self.F9, self.S9)) \
+        .map(map_linear_forward(self.A10, self.b10, is_conv = "conv"))
 
   def backward(self, data, count):
     """
@@ -188,15 +197,19 @@ class CNNClassifier(Classifier):
     """ TODO: Layer1: Conv (32 x 32 x 16) Backward """ 
 
     """ TODO: reduce gradients """
-    L = 0.0
-    dLdA10 = np.zeros(self.A10.shape)
-    dLdb10 = np.zeros(self.b10.shape)
-    dLdA7 = np.zeros(self.A7.shape)
-    dLdb7 = np.zeros(self.b7.shape)
-    dLdA4 = np.zeros(self.A4.shape)
-    dLdb4 = np.zeros(self.b4.shape)
-    dLdA1 = np.zeros(self.A1.shape)
-    dLdb1 = np.zeros(self.b1.shape)
+    L, dLdA10, dLdb10, dLdA7, dLdb7, dLdA4, dLdb4, dLdX, dLdA1, dLdb1 = \
+            data.map(map_softmax_loss()) \
+                .map(map_linear_backward(self.A10, -2, "conv")) \
+                .map(map_max_pool_backward(-3, self.F9, self.S9)) \
+                .map(map_ReLU_backward(-4, "conv")) \
+                .map(map_conv_backward(self.A7, self.S7, self.P7, -5)) \
+                .map(map_max_pool_backward(-6, self.F6, self.S6)) \
+                .map(map_ReLU_backward(-7, "conv")) \
+                .map(map_conv_backward(self.A4, self.S4, self.P4, -8)) \
+                .map(map_max_pool_backward(-9, self.F3, self.S3)) \
+                .map(map_ReLU_backward(-10, "conv")) \
+                .map(map_conv_backward(self.A1, self.S1, self.P1)) \
+                .reduce(reduce_cnn)
 
     """ gradient scaling """
     L /= float(count)

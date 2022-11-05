@@ -48,7 +48,7 @@ class LinearClassifier(Classifier):
     Layer 1: linear
     Todo: Implement the forward pass of Layer1
     """
-    return data.map(lambda (k, (x, y)): (k, (x, [np.zeros((x.shape[0], 2))], y))) # Replace it with your code
+    return data.map(map_linear_forward(self.A, self.b, "is_first"))
 
   def backward(self, data, count):
     """
@@ -72,9 +72,9 @@ class LinearClassifier(Classifier):
     Hint: You need to reduce the RDD from 'backpropagation for Layer 1'
           Also check the output of the loss and the backward function
     """
-    L = 0.0
-    dLdA = np.zeros(self.A.shape)
-    dLdb = np.zeros(self.b.shape)
+    L, dLdX, dLdA, dLdb = data.map(map_softmax_loss()) \
+        .map(map_linear_backward(self.A)) \
+        .reduce(reduce_linear)
 
     """ gradient scaling """
     L /= float(count)

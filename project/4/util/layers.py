@@ -185,3 +185,61 @@ def max_pool_backward(df, X, X_idx, F, S):
   dX = im2col_backward(dX_col, (N*D, 1, H, W), F, F, S, 0).reshape(X.shape)  
 
   return dX
+
+def map_linear_forward(A, b, is_first = False, is_conv = False):
+  if is_first:
+    return lambda (k, (x, y)): (k, (x, [linear_forward(x, A, b)], y))
+  return lambda (k, (x, layers, y)): (k, (x, layers + [linear_forward(layers[-1][0] if is_conv else layers[-1], A, b)], y))
+
+def map_conv_forward(A, b, S, P, is_first = False):
+  if is_first:
+    return lambda (k, (x, y)): (k, (x, [conv_forward(x, A, b, S, P)], y))
+  return lambda (k, (x, layers, y)): (k, (x, layers + [conv_forward(layers[-1][0], A, b, S, P)], y))
+
+def map_ReLU_forward(is_conv = False):
+  return lambda (k, (x, layers, y)): (k, (x, layers + [ReLU_forward(layers[-1][0] if is_conv else layers[-1])], y))
+
+def map_max_pool_forward(F, S):
+  return lambda (k, (x, layers, y)): (k, (x, layers + [max_pool_forward(layers[-1], F, S)], y))
+
+def map_softmax_loss():
+  return lambda (x, layers, y): (x, layers, softmax_loss(layers[-1], y), [])
+
+def map_linear_backward(A, i = 0, is_conv = False):
+  if i:
+    return lambda (x, layers, (L, dLdl), ret): (x, layers, (L, linear_backward(dLdl, layers[i][0] if is_conv else layers[i], A)), ret)
+  return lambda (x, layers, (L, dLdl), ret): [L] + ret + list(linear_backward(dLdl, x, A))
+
+def map_conv_backward(A, S, P, i = 0):
+  if i:
+    return lambda (x, layers, (L, dLdl), ret): (x, layers, (L, conv_backward(dLdl, layers[i][0], layers[i + 1][1], A, S, P)), ret)
+  return lambda (x, layers, (L, dLdl), ret): [L] + ret + list(conv_backward(dLdl, x, layers[-10][1], A, S, P))
+
+def map_ReLU_backward(i, is_conv = False):
+  if is_conv:
+    return lambda (x, layers, (L, dLdl), ret): (x, layers, (L, ReLU_backward(dLdl, layers[i][0])), ret)
+  return lambda (x, layers, (L, (dLdl, dLdA, dLdb)), ret): (x, layers, (L, ReLU_backward(dLdl, layers[i])), ret + [dLdA, dLdb])
+
+def map_max_pool_backward(i, F, S):
+  return lambda (x, layers, (l, (dLdl, dLdA, dLdb)), ret): (x, layers, (l, max_pool_backward(dLdl, layers[i], layers[i + 1][1], F, S)), ret + [dLdA, dLdb])
+
+def reduce_linear(a, b):
+  L, dLdX, dLdA, dLdb = a
+  _L, _dLdX, _dLdA, _dLdb = b
+  return (L + _L, dLdX + _dLdX, dLdA + _dLdA, dLdb + _dLdb)
+
+def reduce_nn(a, b):
+  L, dLdA3, dLdb3, dLdX, dLdA1, dLdb1 = a
+  _L, _dLdA3, _dLdb3, _dLdX, _dLdA1, _dLdb1 = b
+  return L + _L, dLdA3 + _dLdA3, dLdb3 + _dLdb3, \
+      dLdX + _dLdX, dLdA1 + _dLdA1, dLdb1 + _dLdb1
+
+def reduce_cnn(a, b):
+  L, dLdA10, dLdb10, dLdA7, dLdb7, dLdA3, dLdb3, dLdX, dLdA1, dLdb1 = a
+  _L, _dLdA10, _dLdb10, _dLdA7, _dLdb7, _dLdA3, _dLdb3, _dLdX, _dLdA1, _dLdb1 = b
+  return L + _L, \
+      dLdA10 + _dLdA10, dLdb10 + _dLdb10, \
+      dLdA7 + _dLdA7, dLdb7 + _dLdb7, \
+      dLdA3 + _dLdA3, dLdb3 + _dLdb3, \
+      dLdX + _dLdX, dLdA1 + _dLdA1, dLdb1 + _dLdb1
+
