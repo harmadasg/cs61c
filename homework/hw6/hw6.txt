@@ -1,0 +1,16 @@
+======= Problem 1 =======
+a. 32 bit (because of 4G physical memory)
+b. 2^59 rows (64 bit virtual memory minus 5 offset bits)
+c. 2^27 entries (32 bit physical memory minus 5 offset bits)
+
+======= Problem 2 =======
+a. N/8 + 2 Misses
+b. 48 elements (2 tlb entries are used for the histogram)
+
+======= Problem 3 =======
+Access times [increases | decreases | *stays the same] (Choose one.)
+Explanation: Stays the same, only the branch instruction is executed less frequently, doesn't interfere with memory access (loop limit is stored in a register)
+
+======= Problem 4 =======
+a. 2^13 bytes = 8KB
+b. 2^32 / (4 * 2^13) = 2^17
